@@ -32,32 +32,39 @@ CartpilotAI/
 ├── client/                       # React 18 + Vite + Tailwind CSS Frontend
 │   ├── .env.example              # Frontend environment variables template
 │   ├── index.html                # Vite HTML entry
-│   ├── package.json              # Client dependencies & scripts
+│   ├── package.json              # Client dependencies & scripts (React Router, Lucide, Tailwind)
 │   ├── postcss.config.js         # PostCSS configuration
-│   ├── tailwind.config.js        # Tailwind CSS configuration with brand palettes
+│   ├── tailwind.config.js        # Dark navy palette, electric blue, violet accents & glow effects
 │   ├── vite.config.js            # Vite configuration with API reverse proxy
 │   ├── public/
 │   │   └── favicon.svg           # CartPilot SVG icon
 │   └── src/
 │       ├── main.jsx              # Application bootstrap
-│       ├── App.jsx               # Root React component with live health polling
-│       ├── index.css             # Tailwind directives & global styling
+│       ├── App.jsx               # Routes setup & AppProvider wrapper
+│       ├── index.css             # Tailwind directives, custom scrollbars & glass styling
 │       ├── components/
-│       │   ├── common/
-│       │   │   ├── Navbar.jsx    # Navigation bar with live backend status indicator
-│       │   │   ├── Footer.jsx    # Footer with architecture tags
-│       │   │   └── StatusBadge.jsx # Evidence verification badges (Verified, Seller Claim, Unavailable)
-│       │   ├── chat/             # AI agent conversation & recommendation interface
-│       │   ├── products/         # Catalogue, filters, and specification matrix
-│       │   ├── cart/             # Cart staging and budget optimization
-│       │   ├── checkout/         # PayPal Sandbox checkout integration
-│       │   └── passport/         # Digital Purchase Passport & warranty countdown
-│       ├── context/              # React context providers
-│       ├── hooks/                # Custom React hooks
+│       │   ├── layout/
+│       │   │   ├── AppLayout.jsx # Persistent shell with collapsible sidebar & top search header
+│       │   │   ├── Header.jsx    # Quick search, notifications, live API health & quick cart
+│       │   │   └── Sidebar.jsx   # Fixed collapsible navigation with active indicators & badges
+│       │   └── common/           # Shared UI badges and status components
+│       ├── context/
+│       │   └── AppContext.jsx    # Global cart, compare, intelligence, orders, and health state
+│       ├── data/
+│       │   ├── mockProducts.js   # Realistic evidence-verified sample hardware catalogue
+│       │   └── mockOrders.js     # Realistic PayPal Sandbox orders & Digital Passports
 │       ├── pages/
-│       │   └── HomePage.jsx      # Dashboard with live diagnostics & capability matrix
-│       ├── services/
-│       │   └── api.js            # Central API client with error handling
+│       │   ├── DashboardPage.jsx # /dashboard - Welcome, stats, AI entrypoint & recent activity
+│       │   ├── AssistantPage.jsx # /assistant - Multi-turn conversational AI workspace
+│       │   ├── DiscoverPage.jsx  # /discover - Product catalogue, filters & spec drawer
+│       │   ├── ComparePage.jsx   # /compare - Side-by-side spec, warranty & return matrix
+│       │   ├── IntelligencePage.jsx # /intelligence - Evidence sources, risk score & seller integrity
+│       │   ├── CartPage.jsx      # /cart - Shopping cart, budget cap guardrail & sandbox checkout
+│       │   ├── OrdersPage.jsx    # /orders - Verified transaction history & carrier tracking
+│       │   ├── PassportPage.jsx  # /passport - Digital Purchase Passports & warranty claims
+│       │   └── SettingsPage.jsx  # /settings - Profile, budget ceiling & system diagnostics
+│       └── services/
+│           └── api.js            # Central API client for Express backend health checks
 │       └── utils/                # Utility helpers
 │
 └── server/                       # Node.js + Express.js API Backend
