@@ -15,15 +15,25 @@ if (config.gemini.apiKey) {
 }
 
 export const isGeminiConfigured = () => Boolean(geminiClient);
-export const getGeminiModel = (modelName = config.gemini.model) => {
+export const getGeminiClient = () => geminiClient;
+export const getGeminiModel = (options = {}) => {
   if (!geminiClient) {
-    throw new Error('Gemini API client is not configured. Please supply GEMINI_API_KEY.');
+    throw new Error('Gemini API client is not configured. Please supply GEMINI_API_KEY in server/.env.');
   }
-  return geminiClient.getGenerativeModel({ model: modelName });
+  if (typeof options === 'string') {
+    return geminiClient.getGenerativeModel({ model: options });
+  }
+  return geminiClient.getGenerativeModel({
+    model: options.model || config.gemini.model,
+    systemInstruction: options.systemInstruction,
+    tools: options.tools,
+    generationConfig: options.generationConfig,
+  });
 };
 
 export default {
   geminiClient,
   isGeminiConfigured,
+  getGeminiClient,
   getGeminiModel,
 };

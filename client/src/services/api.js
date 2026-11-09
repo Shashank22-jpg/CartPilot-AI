@@ -85,6 +85,23 @@ export const apiService = {
   async getPassports() {
     return fetchJson('/api/orders/passports');
   },
+
+  /**
+   * Communicate with Gemini-powered AI Shopping Agent
+   */
+  async chatWithAi(message, history = [], context = {}) {
+    return fetchJson('/api/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history, context }),
+    });
+  },
+
+  /**
+   * Retrieve AI starter prompt suggestions
+   */
+  async getAiPrompts() {
+    return fetchJson('/api/ai/prompts');
+  },
 };
 
 export default apiService;

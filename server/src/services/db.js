@@ -41,7 +41,7 @@ export async function getDbProducts(filters = {}) {
     .order(safeSortBy, { ascending: isAscending });
 
   if (category && category !== 'All') {
-    query = query.eq('category', category.trim());
+    query = query.ilike('category', `%${category.trim()}%`);
   }
 
   if (minPrice !== undefined && minPrice !== null && !isNaN(Number(minPrice))) {
@@ -53,9 +53,22 @@ export async function getDbProducts(filters = {}) {
   }
 
   if (search && typeof search === 'string' && search.trim()) {
-    const sanitizedTerm = search.trim().replace(/[^a-zA-Z0-9\s-]/g, '').trim();
-    if (sanitizedTerm) {
-      query = query.or(`title.ilike.%${sanitizedTerm}%,brand.ilike.%${sanitizedTerm}%,description.ilike.%${sanitizedTerm}%`);
+    const rawTokens = search.trim().replace(/[^a-zA-Z0-9\s-]/g, '').split(/\s+/).filter(t => t.length >= 2);
+    if (rawTokens.length > 0) {
+      const orConditions = [];
+      // Exact full search phrase match
+      const fullPhrase = rawTokens.join(' ');
+      orConditions.push(`title.ilike.%${fullPhrase}%`);
+      orConditions.push(`brand.ilike.%${fullPhrase}%`);
+      orConditions.push(`description.ilike.%${fullPhrase}%`);
+
+      // Individual keyword tokens
+      rawTokens.slice(0, 4).forEach(tok => {
+        orConditions.push(`title.ilike.%${tok}%`);
+        orConditions.push(`brand.ilike.%${tok}%`);
+      });
+
+      query = query.or(orConditions.join(','));
     }
   }
 
