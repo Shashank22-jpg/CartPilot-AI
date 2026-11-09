@@ -39,8 +39,8 @@ if (supabaseUrl && supabaseServiceKey) {
   supabaseAdminClient = supabaseClient;
 }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.log('[Supabase] URL or Anon Key not configured in .env. Running in demonstration fallback mode.');
+if (!supabaseUrl || (!supabaseAnonKey && !supabaseServiceKey)) {
+  console.log('[Supabase] URL or keys not configured in .env. Running in demonstration fallback mode.');
 }
 
 /**
