@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -24,7 +25,25 @@ export default function Sidebar() {
     setMobileSidebarOpen,
     itemCount,
     compareList,
+    user,
+    logout,
   } = useApp();
+
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    (user?.email ? user.email.split('@')[0] : 'Alex Mercer');
+
+  const displaySubtitle = user?.email || 'Verified Buyer Session';
+
+  const userInitials = (
+    user?.user_metadata?.full_name ||
+    user?.email ||
+    'AM'
+  )
+    .replace(/[^a-zA-Z]/g, '')
+    .slice(0, 2)
+    .toUpperCase() || 'AM';
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -183,27 +202,41 @@ export default function Sidebar() {
         {/* Bottom User Profile Section */}
         <div className="p-3 border-t border-navy-800 bg-navy-950/40">
           {!sidebarCollapsed || mobileSidebarOpen ? (
-            <div className="flex items-center space-x-3 px-2 py-2 rounded-xl bg-navy-850/60 border border-navy-750/70 hover:border-navy-700 transition-colors">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 flex-shrink-0 shadow-sm shadow-electric-500/20">
-                <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
-                  AM
+            <div className="flex items-center justify-between p-2 rounded-xl bg-navy-850/60 border border-navy-750/70 hover:border-navy-700 transition-colors">
+              <div className="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 flex-shrink-0 shadow-sm shadow-electric-500/20">
+                  <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
+                    {userInitials}
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-slate-200 truncate">{displayName}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{displaySubtitle}</p>
                 </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-200 truncate">Alex Mercer</p>
-                <p className="text-[10px] text-slate-400 truncate">Demo Environment Profile</p>
-              </div>
+
+              {/* Logout Button */}
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign out of CartPilot"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-800 transition-colors flex-shrink-0"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center py-1">
-              <div
-                title="Alex Mercer • Demo Environment Profile"
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 shadow-sm shadow-electric-500/20 cursor-pointer hover:scale-105 transition-transform"
+            <div className="flex flex-col items-center py-1 space-y-2">
+              <button
+                type="button"
+                onClick={logout}
+                title={`${displayName} • Click to Sign Out`}
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 shadow-sm shadow-electric-500/20 hover:scale-105 transition-transform group relative"
               >
                 <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
-                  AM
+                  {userInitials}
                 </div>
-              </div>
+              </button>
             </div>
           )}
         </div>

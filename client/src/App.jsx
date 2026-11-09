@@ -3,8 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import AppLayout from './components/layout/AppLayout';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
-// Pages
+// Auth Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+
+// Dashboard & App Pages
 import DashboardPage from './pages/DashboardPage';
 import AssistantPage from './pages/AssistantPage';
 import DiscoverPage from './pages/DiscoverPage';
@@ -21,7 +26,19 @@ export default function App() {
       <AppProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AppLayout />}>
+            {/* Public Authentication Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected SaaS Application Routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="assistant" element={<AssistantPage />} />

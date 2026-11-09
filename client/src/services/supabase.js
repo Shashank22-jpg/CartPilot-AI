@@ -29,15 +29,22 @@ export const isSupabaseConfigured = () => Boolean(supabaseClient);
 /**
  * Authentication Helper Functions
  */
-export async function signUpWithEmail(email, password, fullName = '') {
+export async function signUpWithEmail(email, password, metadata = {}) {
   if (!supabaseClient) throw new Error('Supabase is not configured.');
+  const userMetadata =
+    typeof metadata === 'string'
+      ? { full_name: metadata }
+      : {
+          full_name: metadata.fullName || metadata.full_name || '',
+          phone: metadata.phone || '',
+          ...metadata,
+        };
+
   return supabaseClient.auth.signUp({
-    email,
+    email: email.trim().toLowerCase(),
     password,
     options: {
-      data: {
-        full_name: fullName,
-      },
+      data: userMetadata,
     },
   });
 }
@@ -45,8 +52,34 @@ export async function signUpWithEmail(email, password, fullName = '') {
 export async function signInWithEmail(email, password) {
   if (!supabaseClient) throw new Error('Supabase is not configured.');
   return supabaseClient.auth.signInWithPassword({
-    email,
+    email: email.trim().toLowerCase(),
     password,
+  });
+}
+
+export async function signInWithEmailOrPhone(identifier, password) {
+  if (!supabaseClient) throw new Error('Supabase is not configured.');
+  const trimmed = identifier.trim();
+  const isEmail = trimmed.includes('@');
+
+  if (isEmail) {
+    return supabaseClient.auth.signInWithPassword({
+      email: trimmed.toLowerCase(),
+      password,
+    });
+  } else {
+    const cleanPhone = trimmed.startsWith('+') ? trimmed : `+${trimmed.replace(/[^0-9]/g, '')}`;
+    return supabaseClient.auth.signInWithPassword({
+      phone: cleanPhone,
+      password,
+    });
+  }
+}
+
+export async function resetPasswordForEmail(email) {
+  if (!supabaseClient) throw new Error('Supabase is not configured.');
+  return supabaseClient.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/login`,
   });
 }
 
@@ -120,6 +153,8 @@ export default {
   isSupabaseConfigured,
   signUpWithEmail,
   signInWithEmail,
+  signInWithEmailOrPhone,
+  resetPasswordForEmail,
   signOut,
   getCurrentSession,
   onAuthStateChange,

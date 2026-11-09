@@ -2,7 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { mockProducts } from '../data/mockProducts';
 import { mockOrders, mockPassports } from '../data/mockOrders';
 import apiService from '../services/api';
-import { getCurrentSession, onAuthStateChange, isSupabaseConfigured, fetchProductsFromSupabase } from '../services/supabase';
+import {
+  getCurrentSession,
+  onAuthStateChange,
+  isSupabaseConfigured,
+  fetchProductsFromSupabase,
+  signOut as supabaseSignOut,
+} from '../services/supabase';
 
 const AppContext = createContext(null);
 
@@ -336,6 +342,18 @@ export function AppProvider({ children }) {
   // User Profile and Supabase Auth State
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  const logout = useCallback(async () => {
+    try {
+      await supabaseSignOut();
+      setUser(null);
+      setSession(null);
+      showToast('You have been signed out successfully.', 'info');
+    } catch (err) {
+      console.warn('[AppContext] Sign out error:', err.message);
+    }
+  }, [showToast]);
 
   // Load products from backend (Supabase or server seed) or directly via Supabase browser client
   const loadProducts = useCallback(async (filters = {}) => {
@@ -382,22 +400,42 @@ export function AppProvider({ children }) {
 
   // Listen to browser Supabase auth session
   useEffect(() => {
+    let isMounted = true;
     if (isSupabaseConfigured()) {
-      getCurrentSession().then(s => {
-        if (s) {
-          setSession(s);
-          setUser(s.user);
-        }
-      }).catch(() => {});
+      getCurrentSession()
+        .then((s) => {
+          if (!isMounted) return;
+          if (s) {
+            setSession(s);
+            setUser(s.user);
+          } else {
+            setSession(null);
+            setUser(null);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setSession(null);
+            setUser(null);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setAuthLoading(false);
+        });
 
       const { data: authSub } = onAuthStateChange((_event, newSession) => {
+        if (!isMounted) return;
         setSession(newSession);
         setUser(newSession?.user || null);
+        setAuthLoading(false);
       });
 
       return () => {
+        isMounted = false;
         authSub?.subscription?.unsubscribe?.();
       };
+    } else {
+      setAuthLoading(false);
     }
   }, []);
 
@@ -490,6 +528,8 @@ export function AppProvider({ children }) {
     // Auth
     user,
     session,
+    authLoading,
+    logout,
 
     // User & Budget
     budget,

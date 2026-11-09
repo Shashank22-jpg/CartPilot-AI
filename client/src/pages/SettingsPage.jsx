@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Save,
+  LogOut,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
@@ -24,16 +25,28 @@ export default function SettingsPage() {
     isHealthLoading,
     refreshHealth,
     showToast,
+    user,
+    logout,
   } = useApp();
 
   const [profile, setProfile] = useState({
-    name: 'Alex Mercer',
-    email: 'alex.mercer@cartpilot.ai',
+    name: user?.user_metadata?.full_name || 'Alex Mercer',
+    email: user?.email || 'alex.mercer@cartpilot.ai',
     address: 'Indiranagar 100ft Road, Stage 2',
     city: 'Bengaluru',
     state: 'Karnataka',
     postalCode: '560038',
   });
+
+  React.useEffect(() => {
+    if (user) {
+      setProfile((prev) => ({
+        ...prev,
+        name: user.user_metadata?.full_name || user.user_metadata?.name || prev.name,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user]);
 
   const [localBudget, setLocalBudget] = useState(budget.monthlyLimit);
   const [localThreshold, setLocalThreshold] = useState(budget.alertThresholdPercent);
@@ -144,6 +157,25 @@ export default function SettingsPage() {
                 className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono"
               />
             </div>
+          </div>
+
+          {/* Account Authentication & Session */}
+          <div className="pt-3 border-t border-navy-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs">
+              <span className="text-slate-300 font-semibold block">Signed in via Supabase Auth</span>
+              <span className="text-[11px] text-slate-500 font-mono">
+                {user?.email || 'demo@cartpilot.ai'} {user?.id ? `• UID: ${user.id.slice(0, 8)}...` : ''}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="px-3.5 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors self-start sm:self-auto"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out of CartPilot</span>
+            </button>
           </div>
         </div>
 
