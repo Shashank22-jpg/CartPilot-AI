@@ -11,12 +11,60 @@ const router = Router();
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { category, search, minPrice, maxPrice } = req.query;
+    const { category, search, minPrice, maxPrice, limit, offset, sortBy, sortOrder } = req.query;
+
+    // Input validation
+    if (minPrice !== undefined && minPrice !== '') {
+      const numMin = Number(minPrice);
+      if (isNaN(numMin) || numMin < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid minPrice: must be a non-negative number',
+        });
+      }
+    }
+
+    if (maxPrice !== undefined && maxPrice !== '') {
+      const numMax = Number(maxPrice);
+      if (isNaN(numMax) || numMax < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid maxPrice: must be a non-negative number',
+        });
+      }
+    }
+
+    if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid price range: minPrice cannot be greater than maxPrice',
+      });
+    }
+
+    if (limit !== undefined && limit !== '') {
+      const numLimit = parseInt(limit, 10);
+      if (isNaN(numLimit) || numLimit < 1 || numLimit > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid limit: must be an integer between 1 and 100',
+        });
+      }
+    }
+
+    if (offset !== undefined && offset !== '') {
+      const numOffset = parseInt(offset, 10);
+      if (isNaN(numOffset) || numOffset < 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid offset: must be a non-negative integer',
+        });
+      }
+    }
 
     if (isSupabaseConfigured()) {
       try {
         const dbProducts = await getDbProducts(req.query);
-        if (dbProducts && dbProducts.length > 0) {
+        if (dbProducts !== null) {
           return res.status(200).json({
             success: true,
             source: 'supabase',
@@ -59,7 +107,7 @@ router.get('/', async (req, res, next) => {
       source: 'seed_fallback',
       count: filtered.length,
       data: filtered,
-      notice: 'Serving demonstration seed inventory. Connect Supabase credentials in server/.env to enable live persistence.',
+      notice: 'Serving demonstration seed inventory.',
     });
   } catch (err) {
     next(err);

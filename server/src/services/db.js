@@ -12,6 +12,9 @@ import { supabase, supabaseAdmin, isSupabaseConfigured } from '../config/supabas
 export async function getDbProducts(filters = {}) {
   if (!isSupabaseConfigured()) return null;
 
+  const client = supabaseAdmin || supabase;
+  if (!client) return null;
+
   const {
     category,
     search,
@@ -24,31 +27,39 @@ export async function getDbProducts(filters = {}) {
     sortOrder = 'desc',
   } = filters;
 
-  let query = supabase
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+  const safeOffset = Math.max(parseInt(offset, 10) || 0, 0);
+  const allowedSortColumns = ['created_at', 'price', 'rating', 'title', 'reviews_count'];
+  const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
+  const isAscending = sortOrder === 'asc';
+
+  let query = client
     .from('products')
     .select('*')
     .eq('in_stock', inStock)
-    .range(offset, offset + limit - 1)
-    .order(sortBy, { ascending: sortOrder === 'asc' });
+    .range(safeOffset, safeOffset + safeLimit - 1)
+    .order(safeSortBy, { ascending: isAscending });
 
   if (category && category !== 'All') {
-    query = query.eq('category', category);
+    query = query.eq('category', category.trim());
   }
 
-  if (minPrice !== undefined && minPrice !== null) {
+  if (minPrice !== undefined && minPrice !== null && !isNaN(Number(minPrice))) {
     query = query.gte('price', Number(minPrice));
   }
 
-  if (maxPrice !== undefined && maxPrice !== null) {
+  if (maxPrice !== undefined && maxPrice !== null && !isNaN(Number(maxPrice))) {
     query = query.lte('price', Number(maxPrice));
   }
 
-  if (search && search.trim()) {
-    const term = search.trim();
-    query = query.or(`title.ilike.%${term}%,brand.ilike.%${term}%,description.ilike.%${term}%`);
+  if (search && typeof search === 'string' && search.trim()) {
+    const sanitizedTerm = search.trim().replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+    if (sanitizedTerm) {
+      query = query.or(`title.ilike.%${sanitizedTerm}%,brand.ilike.%${sanitizedTerm}%,description.ilike.%${sanitizedTerm}%`);
+    }
   }
 
-  const { data, error, count } = await query;
+  const { data, error } = await query;
   if (error) {
     console.error('[DB Service] getDbProducts error:', error.message);
     throw error;
@@ -60,9 +71,12 @@ export async function getDbProducts(filters = {}) {
 export async function getDbProductByIdOrSlug(identifier) {
   if (!isSupabaseConfigured()) return null;
 
+  const client = supabaseAdmin || supabase;
+  if (!client) return null;
+
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-  const query = supabase.from('products').select('*');
+  const query = client.from('products').select('*');
   if (isUuid) {
     query.eq('id', identifier);
   } else {

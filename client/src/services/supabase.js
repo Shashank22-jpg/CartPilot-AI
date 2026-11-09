@@ -66,6 +66,55 @@ export function onAuthStateChange(callback) {
   return supabaseClient.auth.onAuthStateChange(callback);
 }
 
+/**
+ * Fetch products directly from Supabase via browser client (RLS Public Read)
+ */
+export async function fetchProductsFromSupabase(filters = {}) {
+  if (!supabaseClient) return null;
+
+  const {
+    category,
+    search,
+    minPrice,
+    maxPrice,
+    limit = 50,
+    offset = 0,
+  } = filters;
+
+  let query = supabaseClient
+    .from('products')
+    .select('*')
+    .eq('in_stock', true)
+    .range(offset, offset + limit - 1)
+    .order('created_at', { ascending: false });
+
+  if (category && category !== 'All') {
+    query = query.eq('category', category);
+  }
+
+  if (minPrice !== undefined && minPrice !== '' && !isNaN(Number(minPrice))) {
+    query = query.gte('price', Number(minPrice));
+  }
+
+  if (maxPrice !== undefined && maxPrice !== '' && !isNaN(Number(maxPrice))) {
+    query = query.lte('price', Number(maxPrice));
+  }
+
+  if (search && search.trim()) {
+    const term = search.trim().replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+    if (term) {
+      query = query.or(`title.ilike.%${term}%,brand.ilike.%${term}%,description.ilike.%${term}%`);
+    }
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.warn('[Supabase Client] fetchProductsFromSupabase error:', error.message);
+    throw error;
+  }
+  return data;
+}
+
 export default {
   supabase,
   isSupabaseConfigured,
@@ -74,4 +123,5 @@ export default {
   signOut,
   getCurrentSession,
   onAuthStateChange,
+  fetchProductsFromSupabase,
 };

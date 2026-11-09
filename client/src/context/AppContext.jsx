@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { mockProducts } from '../data/mockProducts';
 import { mockOrders, mockPassports } from '../data/mockOrders';
 import apiService from '../services/api';
-import { getCurrentSession, onAuthStateChange, isSupabaseConfigured } from '../services/supabase';
+import { getCurrentSession, onAuthStateChange, isSupabaseConfigured, fetchProductsFromSupabase } from '../services/supabase';
 
 const AppContext = createContext(null);
 
@@ -152,6 +152,40 @@ export function AppProvider({ children }) {
   const [products, setProducts] = useState(mockProducts);
   const [productsSource, setProductsSource] = useState('seed_initial');
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [productsError, setProductsError] = useState(null);
+
+  // Helper to normalize product format across Supabase DB and local seed
+  const normalizeProduct = useCallback((p) => {
+    return {
+      ...p,
+      id: p.id || p.slug,
+      title: p.title || p.name || 'Untitled Product',
+      name: p.name || p.title || 'Untitled Product',
+      brand: p.brand || 'Generic',
+      category: p.category || 'General',
+      description: p.description || '',
+      price: Number(p.price) || 0,
+      originalPrice: p.original_price !== undefined ? (p.original_price ? Number(p.original_price) : null) : (p.originalPrice ? Number(p.originalPrice) : null),
+      currency: p.currency || 'INR',
+      rating: Number(p.rating) || 4.5,
+      reviewsCount: p.reviews_count !== undefined ? Number(p.reviews_count) : (p.reviewsCount || 0),
+      stock: p.stock !== undefined ? Number(p.stock) : (p.in_stock ? 50 : 0),
+      inStock: p.in_stock !== undefined ? Boolean(p.in_stock) : (p.inStock !== undefined ? Boolean(p.inStock) : true),
+      image: p.image_url || p.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
+      imageUrl: p.image_url || p.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
+      tag: p.tag || 'Top Pick',
+      badgeType: p.badge_type || p.badgeType || 'sample',
+      specs: p.specs || {},
+      pros: Array.isArray(p.pros) ? p.pros : [],
+      cons: Array.isArray(p.cons) ? p.cons : [],
+      seller: p.seller || {},
+      evidence: p.evidence || {},
+      warranty: p.warranty || {},
+      returnPolicy: p.return_policy || p.returnPolicy || {},
+      riskAssessment: p.risk_assessment || p.riskAssessment || {},
+      is_demo: p.is_demo !== undefined ? p.is_demo : true,
+    };
+  }, []);
 
   // Selected Product for Intelligence Inspection
   const [selectedIntelligenceProduct, setSelectedIntelligenceProduct] = useState(mockProducts[0]);
@@ -164,34 +198,44 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
 
-  // Load products from backend (Supabase or server seed)
-  const loadProducts = useCallback(async () => {
+  // Load products from backend (Supabase or server seed) or directly via Supabase browser client
+  const loadProducts = useCallback(async (filters = {}) => {
     setIsLoadingProducts(true);
+    setProductsError(null);
     try {
-      const res = await apiService.getProducts();
-      if (res && res.data && res.data.length > 0) {
-        const formatted = res.data.map(p => ({
-          ...p,
-          image: p.image_url || p.image,
-          originalPrice: p.original_price !== undefined ? p.original_price : p.originalPrice,
-          reviewsCount: p.reviews_count !== undefined ? p.reviews_count : p.reviewsCount,
-          inStock: p.in_stock !== undefined ? p.in_stock : p.inStock,
-          badgeType: p.badge_type || p.badgeType || 'sample',
-          returnPolicy: p.return_policy || p.returnPolicy,
-          riskAssessment: p.risk_assessment || p.riskAssessment,
-        }));
+      // 1. Try Express backend API (queries live Supabase PostgreSQL)
+      const res = await apiService.getProducts(filters);
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        const formatted = res.data.map(normalizeProduct);
         setProducts(formatted);
-        setProductsSource(res.source || 'api');
+        setProductsSource(res.source || 'supabase');
         if (formatted.length > 0 && !selectedIntelligenceProduct) {
           setSelectedIntelligenceProduct(formatted[0]);
         }
+        return formatted;
       }
     } catch (err) {
-      console.warn('[AppContext] Products fetch failed, using seed dataset:', err.message);
+      console.warn('[AppContext] Backend API fetch failed, trying direct browser Supabase client:', err.message);
+      // 2. Direct browser Supabase client query with RLS public read
+      try {
+        if (isSupabaseConfigured()) {
+          const directData = await fetchProductsFromSupabase(filters);
+          if (directData && directData.length > 0) {
+            const formatted = directData.map(normalizeProduct);
+            setProducts(formatted);
+            setProductsSource('supabase');
+            return formatted;
+          }
+        }
+      } catch (browserErr) {
+        console.warn('[AppContext] Browser Supabase fetch failed:', browserErr.message);
+        setProductsError(browserErr.message);
+      }
+      setProductsError(err.message);
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [selectedIntelligenceProduct]);
+  }, [normalizeProduct, selectedIntelligenceProduct]);
 
   useEffect(() => {
     loadProducts();
@@ -296,6 +340,7 @@ export function AppProvider({ children }) {
     products,
     productsSource,
     isLoadingProducts,
+    productsError,
     loadProducts,
     orders,
     passports,

@@ -15,6 +15,8 @@ import {
   Info,
   Calendar,
   AlertCircle,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { productCategories } from '../data/mockProducts';
@@ -26,6 +28,10 @@ export default function DiscoverPage() {
   const navigate = useNavigate();
   const {
     products,
+    productsSource,
+    isLoadingProducts,
+    productsError,
+    loadProducts,
     addToCart,
     addToCompare,
     isInCompare,
@@ -143,6 +149,24 @@ export default function DiscoverPage() {
               <option value="rating-desc">Rating: Highest</option>
             </select>
           </div>
+
+          {/* Live Supabase Source Indicator */}
+          <div className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-navy-950 border border-navy-800 text-[11px] font-mono flex-shrink-0">
+            <span className={`w-2 h-2 rounded-full ${productsSource === 'supabase' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <Database className="w-3 h-3 text-slate-400" />
+            <span className={productsSource === 'supabase' ? 'text-emerald-300' : 'text-slate-400'}>
+              {productsSource === 'supabase' ? 'Supabase DB' : 'Local Seed'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => loadProducts()}
+            disabled={isLoadingProducts}
+            title="Refresh catalogue from Supabase"
+            className="p-1.5 rounded-lg bg-navy-800 hover:bg-navy-750 text-slate-400 hover:text-white transition-colors flex-shrink-0 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingProducts ? 'animate-spin text-electric-400' : ''}`} />
+          </button>
 
           <button
             onClick={() => {
@@ -271,13 +295,57 @@ export default function DiscoverPage() {
 
         {/* Right Products Catalogue Grid */}
         <div className="lg:col-span-3">
-          {filteredProducts.length === 0 ? (
+          {isLoadingProducts ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="rounded-2xl bg-navy-900/60 border border-navy-800 p-4 space-y-4 animate-pulse">
+                  <div className="aspect-[4/3] bg-navy-950 rounded-xl" />
+                  <div className="space-y-2">
+                    <div className="h-3 bg-navy-800 rounded w-1/3" />
+                    <div className="h-4 bg-navy-800 rounded w-4/5" />
+                    <div className="h-3 bg-navy-800 rounded w-2/3" />
+                  </div>
+                  <div className="pt-3 border-t border-navy-800/60 flex justify-between items-center">
+                    <div className="h-5 bg-navy-800 rounded w-1/4" />
+                    <div className="h-8 bg-navy-800 rounded w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : productsError && filteredProducts.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-navy-900 border border-rose-500/20 space-y-3">
+              <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
+              <h3 className="text-sm font-semibold text-white">Database Query Issue</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                {productsError || 'Unable to retrieve items from Supabase at this time.'}
+              </p>
+              <button
+                onClick={() => loadProducts()}
+                className="px-4 py-2 bg-navy-800 hover:bg-navy-750 text-xs font-semibold text-white rounded-xl transition-colors"
+              >
+                Retry Query
+              </button>
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-navy-900 border border-navy-800 space-y-3">
               <Search className="w-8 h-8 text-slate-500 mx-auto" />
               <h3 className="text-sm font-semibold text-white">No products found</h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
                 No items match your active filters and search query. Try broadening your price range or category.
               </p>
+              <button
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setSelectedBrand('All');
+                  setMaxPrice(250000);
+                  setMinRating(0);
+                  setOnlyVerified(false);
+                  setSearchQuery('');
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-navy-800 hover:bg-navy-750 text-xs text-white transition-colors"
+              >
+                Reset All Filters
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -301,10 +369,17 @@ export default function DiscoverPage() {
                             {product.tag}
                           </span>
                         </div>
-                        <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-navy-900/90 text-slate-300 border border-navy-750 text-[10px] font-medium flex items-center space-x-1 shadow-md">
-                          <ShieldCheck className="w-3 h-3 text-electric-400" />
-                          <span>Sample Data</span>
-                        </span>
+                        {productsSource === 'supabase' ? (
+                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-emerald-950/90 text-emerald-300 border border-emerald-500/30 text-[10px] font-medium flex items-center space-x-1 shadow-md backdrop-blur-md">
+                            <Database className="w-3 h-3 text-emerald-400" />
+                            <span>Supabase DB</span>
+                          </span>
+                        ) : (
+                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-navy-900/90 text-slate-300 border border-navy-750 text-[10px] font-medium flex items-center space-x-1 shadow-md">
+                            <ShieldCheck className="w-3 h-3 text-electric-400" />
+                            <span>Sample Data</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Content Area */}
@@ -343,14 +418,19 @@ export default function DiscoverPage() {
                     <div className="p-4 pt-0">
                       <div className="pt-3 border-t border-navy-800 flex items-center justify-between">
                         <div>
-                          <span className="text-sm font-extrabold font-mono text-white">
-                            {formatCurrency(product.price)}
-                          </span>
-                          {product.originalPrice > product.price && (
-                            <span className="text-[10px] line-through text-slate-500 ml-1.5 font-mono">
-                              {formatCurrency(product.originalPrice)}
+                          <div className="flex items-baseline space-x-1.5">
+                            <span className="text-sm font-extrabold font-mono text-white">
+                              {formatCurrency(product.price)}
                             </span>
-                          )}
+                            {product.originalPrice > product.price && (
+                              <span className="text-[10px] line-through text-slate-500 font-mono">
+                                {formatCurrency(product.originalPrice)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-mono text-emerald-400">
+                            {product.stock !== undefined ? `${product.stock} units available` : 'In stock'}
+                          </span>
                         </div>
 
                         <div className="flex items-center space-x-1.5">
@@ -431,7 +511,9 @@ export default function DiscoverPage() {
 
             <div className="p-4 rounded-xl bg-navy-950 border border-navy-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 block">Sample Purchase Price</span>
+                <span className="text-[10px] text-slate-400 block">
+                  {productsSource === 'supabase' ? 'Current Price (INR)' : 'Sample Purchase Price'}
+                </span>
                 <span className="text-xl font-bold font-mono text-white">
                   {formatCurrency(drawerProduct.price)}
                 </span>
