@@ -1,9 +1,11 @@
 -- ==============================================================================
 -- CartPilot AI - Supabase PostgreSQL Schema Migration
--- Version: 1.0.0
--- Environment: Supabase PostgreSQL (Supports RLS & Auth Integration)
--- Description: Core tables for Agentic Commerce, Product Discovery, Shopping Carts,
---              Order History, Server-Side Verified Payments & Digital Purchase Passports.
+-- Version: 1.1.0
+-- Target: Supabase PostgreSQL (Supports RLS & Auth Integration)
+-- Description: Production database schema for CartPilot AI agentic commerce:
+--              User profiles, product catalogue, active carts, line items, orders,
+--              server-verified PayPal payments, digital purchase passports,
+--              warranties, and deadline reminders.
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
@@ -73,6 +75,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Keeps name and title columns in sync on products for dual-compatibility
+CREATE OR REPLACE FUNCTION sync_product_name_title()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.title IS NULL AND NEW.name IS NOT NULL THEN
+    NEW.title := NEW.name;
+  ELSIF NEW.name IS NULL AND NEW.title IS NOT NULL THEN
+    NEW.name := NEW.title;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ------------------------------------------------------------------------------
 -- 3. PROFILES TABLE
 -- Extends Supabase auth.users with user preferences, delivery details & budget caps
@@ -97,11 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 -- ------------------------------------------------------------------------------
 -- 4. PRODUCTS TABLE
 -- Structured hardware catalogue with specifications, risk dossiers & telemetry
+-- Supports both 'title' and 'name', plus both 'stock' quantity and 'in_stock' boolean
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,
+  name TEXT,
   brand TEXT NOT NULL,
   category TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -110,6 +127,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   currency VARCHAR(3) NOT NULL DEFAULT 'INR',
   rating NUMERIC(3, 2) DEFAULT 4.5 CHECK (rating BETWEEN 0 AND 5),
   reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
+  stock INTEGER NOT NULL DEFAULT 50 CHECK (stock >= 0),
   in_stock BOOLEAN DEFAULT true,
   image_url TEXT NOT NULL,
   tag TEXT,
@@ -131,6 +149,7 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
 CREATE INDEX IF NOT EXISTS idx_products_brand ON public.products(brand);
 CREATE INDEX IF NOT EXISTS idx_products_price ON public.products(price);
 CREATE INDEX IF NOT EXISTS idx_products_in_stock ON public.products(in_stock);
+CREATE INDEX IF NOT EXISTS idx_products_stock ON public.products(stock);
 
 -- ------------------------------------------------------------------------------
 -- 5. CARTS TABLE
@@ -325,8 +344,13 @@ CREATE INDEX IF NOT EXISTS idx_reminders_due_at ON public.reminders(due_at);
 CREATE INDEX IF NOT EXISTS idx_reminders_is_dismissed ON public.reminders(is_dismissed);
 
 -- ------------------------------------------------------------------------------
--- 13. AUTOMATED TRIGGERS FOR UPDATED_AT
+-- 13. AUTOMATED TRIGGERS
 -- ------------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_sync_product_name_title ON public.products;
+CREATE TRIGGER trg_sync_product_name_title
+  BEFORE INSERT OR UPDATE ON public.products
+  FOR EACH ROW EXECUTE FUNCTION sync_product_name_title();
+
 DROP TRIGGER IF EXISTS trg_profiles_updated_at ON public.profiles;
 CREATE TRIGGER trg_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 

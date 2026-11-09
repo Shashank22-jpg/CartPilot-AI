@@ -4,7 +4,7 @@
  * Used when Supabase is not yet configured or pending migration execution.
  */
 
-export const seedProducts = [
+const baseSeedProducts = [
   {
     id: 'a1000000-0000-0000-0000-000000000001',
     slug: 'sony-wh-1000xm5',
@@ -867,3 +867,10 @@ export const seedProducts = [
     is_demo: true,
   },
 ];
+
+export const seedProducts = baseSeedProducts.map(p => ({
+  ...p,
+  name: p.title,
+  stock: p.stock ?? (p.in_stock ? 40 : 0),
+}));
+
