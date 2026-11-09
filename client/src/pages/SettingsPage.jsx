@@ -277,7 +277,7 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-navy-950 border border-navy-800">
               <span className="text-slate-400 text-[10px] block">Express Backend API</span>
               <div className="flex items-center space-x-2 mt-1">
@@ -288,6 +288,31 @@ export default function SettingsPage() {
               </div>
               <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">
                 Latency: {backendHealth?._clientLatencyMs ? `${backendHealth._clientLatencyMs}ms` : 'N/A'}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-navy-950 border border-navy-800">
+              <span className="text-slate-400 text-[10px] block">Supabase PostgreSQL</span>
+              <div className="flex items-center space-x-2 mt-1">
+                <span className={`w-2 h-2 rounded-full ${
+                  backendHealth?.database?.connected
+                    ? 'bg-emerald-400'
+                    : backendHealth?.database?.status === 'schema_pending'
+                    ? 'bg-amber-400'
+                    : 'bg-slate-500'
+                }`} />
+                <span className="font-mono font-bold text-white text-[11px]">
+                  {backendHealth?.database?.connected
+                    ? 'OPERATIONAL'
+                    : backendHealth?.database?.status === 'schema_pending'
+                    ? 'SCHEMA PENDING'
+                    : 'PENDING CONFIG'}
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono mt-0.5 block truncate" title={backendHealth?.database?.message}>
+                {backendHealth?.database?.productsCount !== undefined
+                  ? `${backendHealth.database.productsCount} catalog rows`
+                  : 'Run schema.sql'}
               </span>
             </div>
 

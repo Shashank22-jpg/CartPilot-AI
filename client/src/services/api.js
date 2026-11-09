@@ -38,10 +38,52 @@ async function fetchJson(endpoint, options = {}) {
 
 export const apiService = {
   /**
-   * Check backend server health status
+   * Check backend server & integration health status
    */
   async checkHealth() {
     return fetchJson('/api/health');
+  },
+
+  /**
+   * Check live database connection status
+   */
+  async checkDbHealth() {
+    return fetchJson('/api/health/db');
+  },
+
+  /**
+   * Retrieve products from API (Supabase or seed fallback)
+   */
+  async getProducts(params = {}) {
+    const query = new URLSearchParams();
+    if (params.category && params.category !== 'All') query.set('category', params.category);
+    if (params.search) query.set('search', params.search);
+    if (params.minPrice) query.set('minPrice', params.minPrice);
+    if (params.maxPrice) query.set('maxPrice', params.maxPrice);
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return fetchJson(`/api/products${qs}`);
+  },
+
+  /**
+   * Retrieve single product
+   */
+  async getProduct(idOrSlug) {
+    return fetchJson(`/api/products/${idOrSlug}`);
+  },
+
+  /**
+   * Retrieve user order history
+   */
+  async getOrders() {
+    return fetchJson('/api/orders');
+  },
+
+  /**
+   * Retrieve digital purchase passports
+   */
+  async getPassports() {
+    return fetchJson('/api/orders/passports');
   },
 };
 

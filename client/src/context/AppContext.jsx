@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { mockProducts } from '../data/mockProducts';
 import { mockOrders, mockPassports } from '../data/mockOrders';
 import apiService from '../services/api';
+import { getCurrentSession, onAuthStateChange, isSupabaseConfigured } from '../services/supabase';
 
 const AppContext = createContext(null);
 
@@ -147,12 +148,75 @@ export function AppProvider({ children }) {
     showToast('Comparison list cleared', 'info');
   }, [showToast]);
 
+  // Product Catalogue State (Dynamic API / Supabase with Seed Fallback)
+  const [products, setProducts] = useState(mockProducts);
+  const [productsSource, setProductsSource] = useState('seed_initial');
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+
   // Selected Product for Intelligence Inspection
   const [selectedIntelligenceProduct, setSelectedIntelligenceProduct] = useState(mockProducts[0]);
 
   // Orders and Passports
   const [orders, setOrders] = useState(mockOrders);
   const [passports, setPassports] = useState(mockPassports);
+
+  // User Profile and Supabase Auth State
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+
+  // Load products from backend (Supabase or server seed)
+  const loadProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
+    try {
+      const res = await apiService.getProducts();
+      if (res && res.data && res.data.length > 0) {
+        const formatted = res.data.map(p => ({
+          ...p,
+          image: p.image_url || p.image,
+          originalPrice: p.original_price !== undefined ? p.original_price : p.originalPrice,
+          reviewsCount: p.reviews_count !== undefined ? p.reviews_count : p.reviewsCount,
+          inStock: p.in_stock !== undefined ? p.in_stock : p.inStock,
+          badgeType: p.badge_type || p.badgeType || 'sample',
+          returnPolicy: p.return_policy || p.returnPolicy,
+          riskAssessment: p.risk_assessment || p.riskAssessment,
+        }));
+        setProducts(formatted);
+        setProductsSource(res.source || 'api');
+        if (formatted.length > 0 && !selectedIntelligenceProduct) {
+          setSelectedIntelligenceProduct(formatted[0]);
+        }
+      }
+    } catch (err) {
+      console.warn('[AppContext] Products fetch failed, using seed dataset:', err.message);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  }, [selectedIntelligenceProduct]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  // Listen to browser Supabase auth session
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      getCurrentSession().then(s => {
+        if (s) {
+          setSession(s);
+          setUser(s.user);
+        }
+      }).catch(() => {});
+
+      const { data: authSub } = onAuthStateChange((_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user || null);
+      });
+
+      return () => {
+        authSub?.subscription?.unsubscribe?.();
+      };
+    }
+  }, []);
 
   // Budget & Preferences (Base currency: INR)
   const [budget, setBudget] = useState({
@@ -229,9 +293,16 @@ export function AppProvider({ children }) {
     setSelectedIntelligenceProduct,
 
     // Data lists
-    products: mockProducts,
+    products,
+    productsSource,
+    isLoadingProducts,
+    loadProducts,
     orders,
     passports,
+
+    // Auth
+    user,
+    session,
 
     // User & Budget
     budget,

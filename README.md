@@ -150,6 +150,7 @@ PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret_here
 # Supabase Credentials
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # Google Gemini API
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -160,9 +161,23 @@ GEMINI_API_KEY=your_gemini_api_key_here
 # Empty in development to use Vite proxy
 VITE_API_BASE_URL=
 VITE_PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
+
+# Supabase Credentials (Safe for browser client)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
-### 3. Running in Development Mode
+### 3. Supabase Database Migration & Seeding
+
+1. Open your **[Supabase Dashboard](https://supabase.com/dashboard)** and select your project.
+2. Navigate to the **SQL Editor** tab from the left sidebar.
+3. Click **New query** and paste the entire contents of [`server/supabase/schema.sql`](file:///d:/CartpilotAI/server/supabase/schema.sql).
+4. Click **Run** (or `Ctrl+Enter`). This creates all 10 core tables, enums, indexes, triggers, and Row Level Security policies.
+5. Create another new query and paste the contents of [`server/supabase/seed.sql`](file:///d:/CartpilotAI/server/supabase/seed.sql).
+6. Click **Run** to seed 12 realistic electronics products with specifications and policy terms.
+7. Verify in **Table Editor** that `products` contains 12 rows.
+
+### 4. Running in Development Mode
 
 Run both client and server concurrently from the root directory:
 
@@ -194,23 +209,30 @@ Once running, verify connectivity:
     "version": "1.0.0",
     "environment": "development",
     "uptimeSeconds": 12.4,
-    "timestamp": "2026-11-01T07:25:00.000Z",
+    "timestamp": "2026-11-04T18:50:00.000Z",
     "integrations": {
       "paypal": false,
-      "supabase": false,
-      "gemini": false
+      "supabase": true,
+      "gemini": true
+    },
+    "database": {
+      "connected": true,
+      "status": "operational",
+      "productsCount": 12
     }
   }
   ```
-- **Frontend Dashboard**: [http://localhost:5173](http://localhost:5173) displays real-time connection status, roundtrip latency, and diagnostic information.
+- **Database Diagnostic Check**: [http://localhost:5000/api/health/db](http://localhost:5000/api/health/db)
+- **Frontend Dashboard**: [http://localhost:5173](http://localhost:5173) displays real-time connection status, roundtrip latency, and diagnostic information in `/settings`.
 
 ---
 
 ## 📋 Hackathon Roadmap (14 Core Requirements)
 
 - [x] **Project Initialization**: Modular monorepo setup, Vite + React, Tailwind CSS, Express backend, health check API.
+- [x] **Database Schema & RLS**: Complete Supabase PostgreSQL migration (10 tables, UUID PKs, Row Level Security, multi-currency).
+- [x] **Product Catalogue Seed**: 12 realistic hardware items with structured evidence, return policies, and specifications.
 - [ ] **Auth & User Profiles**: Supabase Authentication with profile preferences and budgets.
-- [ ] **Product Catalogue**: Realistic seed dataset with structured evidence and specifications.
 - [ ] **Natural-Language Discovery**: Gemini-powered conversational query analysis.
 - [ ] **Specification Comparison**: Side-by-side evidence matrix and tradeoff analysis.
 - [ ] **Budget-Aware Recommendations**: Smart bundle optimization within designated spending caps.
