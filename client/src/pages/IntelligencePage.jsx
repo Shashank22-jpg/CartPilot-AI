@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function IntelligencePage() {
   const navigate = useNavigate();
@@ -34,9 +35,9 @@ export default function IntelligencePage() {
       {/* Product Selector Header */}
       <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
         <div>
-          <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Autonomous Risk & Evidence Audit</span>
+          <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-electric-400" />
+            <span>Specification Dossier • Demo Environment</span>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Purchase Intelligence Dossier
@@ -89,11 +90,11 @@ export default function IntelligencePage() {
               </h3>
               <div className="mt-2 flex items-baseline space-x-2">
                 <span className="text-lg font-black font-mono text-white">
-                  ${product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </span>
                 {product.originalPrice > product.price && (
                   <span className="text-xs line-through text-slate-500 font-mono">
-                    ${product.originalPrice.toFixed(2)}
+                    {formatCurrency(product.originalPrice)}
                   </span>
                 )}
               </div>
@@ -161,8 +162,8 @@ export default function IntelligencePage() {
           {/* Overall Confidence Score Banner */}
           <div className="p-6 rounded-2xl bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 border border-navy-750 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">
-                CartPilot Verification Algorithm
+              <span className="text-[10px] font-bold text-electric-400 uppercase tracking-wider block mb-1">
+                CartPilot Specification Review
               </span>
               <h3 className="text-lg font-bold text-white">
                 {product.riskAssessment.status}
@@ -175,13 +176,13 @@ export default function IntelligencePage() {
             <div className="flex items-center space-x-3 bg-navy-950/80 border border-navy-800 p-4 rounded-xl flex-shrink-0">
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                  Confidence Score
+                  Catalogue Status
                 </span>
-                <span className="text-2xl font-black font-mono text-emerald-400">
-                  {product.evidence.overallConfidenceScore}%
+                <span className="text-base font-bold font-mono text-electric-400">
+                  Sample Item
                 </span>
               </div>
-              <Award className="w-8 h-8 text-emerald-400" />
+              <Award className="w-8 h-8 text-electric-400" />
             </div>
           </div>
 
@@ -278,7 +279,7 @@ export default function IntelligencePage() {
               <div className="p-3 rounded-xl bg-navy-950 border border-navy-800">
                 <span className="text-slate-400 text-[10px] block">Return Restocking Fee</span>
                 <span className="text-white font-mono font-bold mt-1 block">
-                  ${product.returnPolicy.restockingFee} (Zero Fee)
+                  {formatCurrency(product.returnPolicy.restockingFee)} (Zero Fee)
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-navy-950 border border-navy-800">

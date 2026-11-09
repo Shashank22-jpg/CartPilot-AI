@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export default function CartPage() {
                         </h4>
                         <div className="flex items-center space-x-2 mt-1 text-[11px] text-slate-400">
                           <span className="font-mono text-white font-bold">
-                            ${product.price.toFixed(2)} each
+                            {formatCurrency(product.price)} each
                           </span>
                           <span>•</span>
                           <span className="text-emerald-400">
@@ -159,7 +160,7 @@ export default function CartPage() {
 
                       {/* Line Item Total */}
                       <span className="font-mono font-bold text-sm text-white min-w-[70px] text-right">
-                        ${(product.price * quantity).toFixed(2)}
+                        {formatCurrency(product.price * quantity)}
                       </span>
 
                       {/* Remove Button */}
@@ -195,15 +196,15 @@ export default function CartPage() {
               <div className="mt-3 text-xs text-slate-300 space-y-2">
                 <div className="flex justify-between text-[11px]">
                   <span>Current spend this month:</span>
-                  <span className="font-mono text-white">${budget.spentThisMonth.toFixed(2)}</span>
+                  <span className="font-mono text-white">{formatCurrency(budget.spentThisMonth)}</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span>With current cart (+${total.toFixed(2)}):</span>
-                  <span className="font-mono text-white font-bold">${projectedMonthlySpend.toFixed(2)}</span>
+                  <span>With current cart (+{formatCurrency(total)}):</span>
+                  <span className="font-mono text-white font-bold">{formatCurrency(projectedMonthlySpend)}</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
                   <span>Monthly budget ceiling:</span>
-                  <span className="font-mono text-slate-400">${budget.monthlyLimit.toFixed(2)}</span>
+                  <span className="font-mono text-slate-400">{formatCurrency(budget.monthlyLimit)}</span>
                 </div>
 
                 <div className="w-full bg-navy-950 rounded-full h-2 mt-2 overflow-hidden border border-navy-800">
@@ -228,19 +229,19 @@ export default function CartPage() {
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between text-slate-300">
                   <span>Subtotal ({itemCount} items)</span>
-                  <span className="font-mono font-semibold">${subtotal.toFixed(2)}</span>
+                  <span className="font-mono font-semibold">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
-                  <span>Estimated Sales Tax (8.25%)</span>
-                  <span className="font-mono">${tax.toFixed(2)}</span>
+                  <span>Estimated GST (18%)</span>
+                  <span className="font-mono">{formatCurrency(tax)}</span>
                 </div>
                 <div className="flex justify-between text-slate-300">
-                  <span>Express Insured Shipping</span>
+                  <span>Insured Delivery</span>
                   <span className="font-mono">
                     {shipping === 0 ? (
-                      <span className="text-emerald-400 font-semibold">FREE</span>
+                      <span className="text-emerald-400 font-semibold">FREE (Above ₹10,000)</span>
                     ) : (
-                      `$${shipping.toFixed(2)}`
+                      formatCurrency(shipping)
                     )}
                   </span>
                 </div>
@@ -248,7 +249,7 @@ export default function CartPage() {
                 <div className="pt-3 border-t border-navy-800 flex justify-between text-sm">
                   <span className="font-bold text-white">Estimated Total</span>
                   <span className="font-mono font-black text-white text-base">
-                    ${total.toFixed(2)}
+                    {formatCurrency(total)}
                   </span>
                 </div>
               </div>
@@ -298,7 +299,7 @@ export default function CartPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Payment Total:</span>
-                <span className="font-mono font-bold text-white">${total.toFixed(2)} USD</span>
+                <span className="font-mono font-bold text-white">{formatCurrency(total)} (INR Base)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Verification Model:</span>

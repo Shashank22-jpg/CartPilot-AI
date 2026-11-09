@@ -14,6 +14,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -42,13 +43,13 @@ export default function OrdersPage() {
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-2">
             <PackageCheck className="w-3.5 h-3.5 text-electric-400" />
-            <span>Audited Transaction Ledger</span>
+            <span>Sample Transaction Ledger (Demo)</span>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Order History & Payment Verification
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Complete transaction records verified through the PayPal Sandbox Orders v2 API with digital purchase passport linkages.
+            Sample transaction records showcasing PayPal Sandbox Orders v2 API payload schema with digital purchase passport linkages.
           </p>
         </div>
 
@@ -120,7 +121,7 @@ export default function OrdersPage() {
                       Total Amount
                     </span>
                     <span className="font-mono font-bold text-white text-sm">
-                      ${order.total.toFixed(2)}
+                      {formatCurrency(order.total)}
                     </span>
                   </div>
                 </div>
@@ -152,7 +153,7 @@ export default function OrdersPage() {
                             {item.title}
                           </h4>
                           <div className="flex items-center space-x-2 mt-1 text-[11px] text-slate-400">
-                            <span className="font-mono">${item.price.toFixed(2)}</span>
+                            <span className="font-mono">{formatCurrency(item.price)}</span>
                             <span>•</span>
                             <span>Qty: {item.quantity}</span>
                             <span>•</span>

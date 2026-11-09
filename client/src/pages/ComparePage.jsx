@@ -14,6 +14,7 @@ import {
   Award,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function ComparePage() {
   const navigate = useNavigate();
@@ -134,11 +135,11 @@ export default function ComparePage() {
 
                     <div className="mt-2 flex items-baseline space-x-2">
                       <span className="text-base font-extrabold font-mono text-white">
-                        ${product.price.toFixed(2)}
+                        {formatCurrency(product.price)}
                       </span>
                       {product.originalPrice > product.price && (
                         <span className="text-[10px] line-through text-slate-500 font-mono">
-                          ${product.originalPrice.toFixed(2)}
+                          {formatCurrency(product.originalPrice)}
                         </span>
                       )}
                     </div>
@@ -189,7 +190,7 @@ export default function ComparePage() {
                     <strong>Watchout:</strong> {product.cons[0]}
                   </p>
                   <div className="pt-2 border-t border-navy-800 text-[10px] font-mono text-emerald-400">
-                    Confidence: {product.evidence.overallConfidenceScore}%
+                    Status: Sample Spec Dossier
                   </div>
                 </div>
               ))}
@@ -262,7 +263,7 @@ export default function ComparePage() {
                     <td className="py-3 px-4 font-medium text-slate-400">Restocking Fee</td>
                     {compareList.map((product) => (
                       <td key={product.id} className="py-3 px-4 font-mono text-emerald-400">
-                        ${product.returnPolicy.restockingFee} (Free Returns)
+                        {formatCurrency(product.returnPolicy.restockingFee)} (Free Returns)
                       </td>
                     ))}
                   </tr>
@@ -336,7 +337,7 @@ export default function ComparePage() {
                     />
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-200 truncate">{product.title}</p>
-                      <p className="text-[10px] text-slate-400">{product.brand} • ${product.price}</p>
+                      <p className="text-[10px] text-slate-400">{product.brand} • {formatCurrency(product.price)}</p>
                     </div>
                   </div>
                   <Plus className="w-4 h-4 text-electric-400 flex-shrink-0" />

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { productCategories } from '../data/mockProducts';
+import { formatCurrency } from '../utils/currency';
 
 export default function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,7 +37,7 @@ export default function DiscoverPage() {
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [maxPrice, setMaxPrice] = useState(2500);
+  const [maxPrice, setMaxPrice] = useState(250000);
   const [minRating, setMinRating] = useState(0);
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [sortBy, setSortBy] = useState('relevance');
@@ -146,7 +147,7 @@ export default function DiscoverPage() {
             onClick={() => {
               setSelectedCategory('All');
               setSelectedBrand('All');
-              setMaxPrice(2500);
+              setMaxPrice(250000);
               setMinRating(0);
               setOnlyVerified(false);
               setSearchQuery('');
@@ -210,20 +211,20 @@ export default function DiscoverPage() {
             <div>
               <div className="flex items-center justify-between mb-1 text-xs">
                 <span className="text-[11px] font-semibold text-slate-400">Max Price Cap</span>
-                <span className="font-mono text-white font-bold">${maxPrice}</span>
+                <span className="font-mono text-white font-bold">{formatCurrency(maxPrice)}</span>
               </div>
               <input
                 type="range"
-                min="100"
-                max="2500"
-                step="50"
+                min="10000"
+                max="250000"
+                step="5000"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
                 className="w-full accent-electric-500 bg-navy-950"
               />
               <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
-                <span>$100</span>
-                <span>$2,500</span>
+                <span>{formatCurrency(10000)}</span>
+                <span>{formatCurrency(250000)}</span>
               </div>
             </div>
 
@@ -299,9 +300,9 @@ export default function DiscoverPage() {
                             {product.tag}
                           </span>
                         </div>
-                        <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-bold flex items-center space-x-1 shadow-md">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>{product.evidence.overallConfidenceScore}% Score</span>
+                        <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-navy-900/90 text-slate-300 border border-navy-750 text-[10px] font-medium flex items-center space-x-1 shadow-md">
+                          <ShieldCheck className="w-3 h-3 text-electric-400" />
+                          <span>Sample Data</span>
                         </span>
                       </div>
 
@@ -342,11 +343,11 @@ export default function DiscoverPage() {
                       <div className="pt-3 border-t border-navy-800 flex items-center justify-between">
                         <div>
                           <span className="text-sm font-extrabold font-mono text-white">
-                            ${product.price.toFixed(2)}
+                            {formatCurrency(product.price)}
                           </span>
                           {product.originalPrice > product.price && (
                             <span className="text-[10px] line-through text-slate-500 ml-1.5 font-mono">
-                              ${product.originalPrice.toFixed(2)}
+                              {formatCurrency(product.originalPrice)}
                             </span>
                           )}
                         </div>
@@ -429,9 +430,9 @@ export default function DiscoverPage() {
 
             <div className="p-4 rounded-xl bg-navy-950 border border-navy-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 block">Verified Purchase Price</span>
+                <span className="text-[10px] text-slate-400 block">Sample Purchase Price</span>
                 <span className="text-xl font-bold font-mono text-white">
-                  ${drawerProduct.price.toFixed(2)}
+                  {formatCurrency(drawerProduct.price)}
                 </span>
               </div>
               <div className="flex space-x-2">
@@ -479,7 +480,7 @@ export default function DiscoverPage() {
               </p>
               <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 font-mono">
                 <span>Return Days: {drawerProduct.returnPolicy.days}</span>
-                <span>Restocking Fee: ${drawerProduct.returnPolicy.restockingFee}</span>
+                <span>Restocking Fee: {formatCurrency(drawerProduct.returnPolicy.restockingFee)}</span>
                 <span>Prepaid Shipping: {drawerProduct.returnPolicy.prepaidLabel ? 'Yes' : 'No'}</span>
               </div>
             </div>

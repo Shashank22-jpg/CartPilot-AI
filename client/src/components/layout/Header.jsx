@@ -5,14 +5,11 @@ import {
   ShoppingCart,
   Bell,
   RefreshCw,
-  ShieldCheck,
-  Sparkles,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
   ExternalLink,
+  Menu,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { formatCurrency } from '../../utils/currency';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -25,6 +22,7 @@ export default function Header() {
     isHealthLoading,
     refreshHealth,
     passports,
+    toggleMobileSidebar,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,13 +41,13 @@ export default function Header() {
   const pageTitles = {
     '/dashboard': 'Personalized Overview',
     '/assistant': 'Conversational AI Shopping Assistant',
-    '/discover': 'Verified Product Catalogue',
-    '/compare': 'Specification & Evidence Matrix',
-    '/intelligence': 'Purchase Intelligence & Risk Report',
-    '/cart': 'Shopping Cart & Budget Review',
+    '/discover': 'Seed Product Catalogue',
+    '/compare': 'Specification Matrix',
+    '/intelligence': 'Purchase Intelligence Report',
+    '/cart': 'Shopping Cart & Budget Safeguards',
     '/orders': 'Order History & Ledger',
     '/passport': 'Digital Purchase Passport',
-    '/settings': 'Preferences & Budget Caps',
+    '/settings': 'Preferences & Settings',
   };
 
   const currentTitle = pageTitles[location.pathname] || 'Agentic Commerce';
@@ -58,15 +56,23 @@ export default function Header() {
   const activeReturnPassports = passports.filter(p => p.returnDaysRemaining > 0);
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-navy-950/80 backdrop-blur-md border-b border-navy-800 px-6 flex items-center justify-between">
-      {/* Page Title & Breadcrumb */}
-      <div className="flex items-center space-x-4 min-w-0">
+    <header className="sticky top-0 z-30 h-16 bg-navy-950/80 backdrop-blur-md border-b border-navy-800 px-4 sm:px-6 flex items-center justify-between">
+      {/* Mobile Hamburger & Page Title */}
+      <div className="flex items-center space-x-3 min-w-0">
+        <button
+          onClick={toggleMobileSidebar}
+          className="md:hidden p-2 rounded-xl bg-navy-900 border border-navy-750 text-slate-300 hover:text-white"
+          title="Open Menu"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+
         <div>
           <h1 className="text-sm font-bold text-white tracking-tight truncate">
             {currentTitle}
           </h1>
           <p className="text-[11px] text-slate-400 hidden sm:block">
-            PayPal AI Hackathon 2026 • Verified Agentic Framework
+            CartPilot AI • Prototype Demonstration
           </p>
         </div>
       </div>
@@ -79,7 +85,7 @@ export default function Header() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search products, verified specs, or ask assistant..."
+            placeholder="Search products, specifications, or ask assistant..."
             className="w-full bg-navy-900 border border-navy-750 focus:border-electric-500 rounded-xl pl-9 pr-12 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-colors"
           />
           <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-navy-800 rounded border border-navy-700">
@@ -89,13 +95,13 @@ export default function Header() {
       </form>
 
       {/* Action Controls & Statuses */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3">
         {/* Backend Health Check Pill */}
         <button
           onClick={refreshHealth}
           disabled={isHealthLoading}
           title="Click to ping backend Express API /api/health"
-          className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-navy-900 border border-navy-750 hover:border-navy-600 transition-colors text-xs"
+          className="flex items-center space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-navy-900 border border-navy-750 hover:border-navy-600 transition-colors text-xs"
         >
           <span
             className={`w-2 h-2 rounded-full ${
@@ -128,7 +134,7 @@ export default function Header() {
               <div className="flex items-center justify-between pb-3 border-b border-navy-800">
                 <span className="text-xs font-bold text-white">Purchase & Return Alerts</span>
                 <span className="text-[10px] text-electric-400 bg-electric-500/10 px-2 py-0.5 rounded-full font-mono">
-                  {activeReturnPassports.length} Active Deadlines
+                  {activeReturnPassports.length} Sample Deadlines
                 </span>
               </div>
 
@@ -163,10 +169,12 @@ export default function Header() {
         {/* Quick Cart Button */}
         <Link
           to="/cart"
-          className="relative flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-electric-600 to-violet-600 hover:from-electric-500 hover:to-violet-500 text-white font-medium text-xs shadow-glow-blue transition-all"
+          className="relative flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-electric-600 to-violet-600 hover:from-electric-500 hover:to-violet-500 text-white font-medium text-xs shadow-glow-blue transition-all"
         >
           <ShoppingCart className="w-4 h-4" />
-          <span className="hidden sm:inline font-mono">${((typeof total === 'number' ? total : cartTotal) || 0).toFixed(2)}</span>
+          <span className="hidden sm:inline font-mono">
+            {formatCurrency(total || cartTotal || 0)}
+          </span>
           {itemCount > 0 && (
             <span className="w-5 h-5 rounded-full bg-white text-navy-950 text-[10px] font-black flex items-center justify-center">
               {itemCount}

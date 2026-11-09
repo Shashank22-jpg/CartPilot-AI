@@ -13,10 +13,10 @@ import {
   Search,
   ExternalLink,
   Bot,
-  AlertTriangle,
-  CheckCircle2,
+  Package,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -28,7 +28,6 @@ export default function DashboardPage() {
     addToCart,
     addToCompare,
     setSelectedIntelligenceProduct,
-    backendHealth,
   } = useApp();
 
   const [quickInput, setQuickInput] = useState('');
@@ -45,7 +44,7 @@ export default function DashboardPage() {
   };
 
   const recentSearches = [
-    'ANC headphones under $350',
+    'ANC headphones under ₹35,000',
     'MacBook M3 vs Dell XPS 15',
     'Mechanical keyboards with QMK/VIA',
     'OLED monitors 240Hz with burn-in warranty',
@@ -82,14 +81,14 @@ export default function DashboardPage() {
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-4">
             <Sparkles className="w-3.5 h-3.5 text-electric-400" />
-            <span>CartPilot Agentic Commerce Engine • Ready</span>
+            <span>CartPilot Agentic Commerce • Prototype Demo Environment</span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Welcome back, <span className="bg-gradient-to-r from-electric-400 via-violet-300 to-cyan-300 bg-clip-text text-transparent">Alex</span>
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Your shopping agent is active. Ask questions in natural language, evaluate verified specifications, or inspect your digital purchase passports and active return deadlines.
+            Your shopping agent is active. Ask questions in natural language, evaluate specifications, or inspect your digital purchase passports and active return deadlines. All catalogue items and orders are populated with realistic sample data for hackathon evaluation.
           </p>
 
           {/* Quick AI Prompt Input */}
@@ -100,7 +99,7 @@ export default function DashboardPage() {
                 type="text"
                 value={quickInput}
                 onChange={(e) => setQuickInput(e.target.value)}
-                placeholder="Ask your shopping agent (e.g., 'Find me a travel-ready drone under $1,200 with verified obstacle avoidance')..."
+                placeholder="Ask your shopping agent (e.g., 'Find me a travel-ready drone under ₹1,20,000 with obstacle avoidance')..."
                 className="w-full bg-navy-950/90 border border-navy-700 focus:border-electric-400 rounded-2xl pl-12 pr-32 py-3.5 text-xs text-white placeholder-slate-400 focus:outline-none transition-all"
               />
               <button
@@ -141,8 +140,12 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4">
             <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">${budget.spentThisMonth.toFixed(2)}</span>
-              <span className="text-xs text-slate-400 font-mono">/ ${budget.monthlyLimit}</span>
+              <span className="text-xl font-bold font-mono text-white">
+                {formatCurrency(budget.spentThisMonth)}
+              </span>
+              <span className="text-xs text-slate-400 font-mono">
+                / {formatCurrency(budget.monthlyLimit)}
+              </span>
             </div>
             <div className="w-full bg-navy-950 rounded-full h-2 mt-2 overflow-hidden border border-navy-800">
               <div
@@ -169,10 +172,10 @@ export default function DashboardPage() {
           <div className="mt-4">
             <div className="flex items-baseline space-x-2">
               <span className="text-xl font-bold font-mono text-white">{passports.length}</span>
-              <span className="text-xs text-emerald-400 font-medium">All Authenticated</span>
+              <span className="text-xs text-violet-400 font-medium">Sample Records</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
-              Cryptographically verified purchase proofs and serial numbers
+              Simulated proof-of-purchase tokens, serial tracking, and warranty records
             </p>
             <Link to="/passport" className="text-[11px] text-electric-400 hover:underline mt-2 inline-flex items-center space-x-1">
               <span>View Passports</span>
@@ -195,7 +198,7 @@ export default function DashboardPage() {
               <span className="text-xs text-amber-400 font-medium">10d & 22d left</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
-              Automated reminders prevent missed refund cutoffs
+              Automated reminders prevent missed refund cutoffs (Sample tracking)
             </p>
             <Link to="/passport" className="text-[11px] text-amber-400 hover:underline mt-2 inline-flex items-center space-x-1">
               <span>Inspect Deadlines</span>
@@ -204,24 +207,24 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Metric 4: Specification Confidence */}
+        {/* Metric 4: Seed Inventory Coverage */}
         <div className="p-5 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Verification Rate</span>
+            <span className="text-xs font-medium text-slate-400">Catalogue Seed</span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <ShieldCheck className="w-4 h-4" />
+              <Package className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-4">
             <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">98.2%</span>
-              <span className="text-xs text-emerald-400 font-medium">Verified Evidence</span>
+              <span className="text-xl font-bold font-mono text-white">{products.length} Items</span>
+              <span className="text-xs text-emerald-400 font-medium">Sample Inventory</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
-              Independent lab tests, whitepapers & FCC filings
+              Structured manufacturer specifications for demo testing
             </p>
-            <Link to="/intelligence" className="text-[11px] text-emerald-400 hover:underline mt-2 inline-flex items-center space-x-1">
-              <span>Inspect Evidence</span>
+            <Link to="/discover" className="text-[11px] text-emerald-400 hover:underline mt-2 inline-flex items-center space-x-1">
+              <span>Browse Catalogue</span>
               <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -237,7 +240,7 @@ export default function DashboardPage() {
               <span>Suggested Agentic Inquiries</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Click any scenario to load a full evidence-backed dialogue in the AI Assistant
+              Click any scenario to load a dialogue in the AI Assistant
             </p>
           </div>
           <Link
@@ -284,10 +287,10 @@ export default function DashboardPage() {
             <div>
               <h3 className="text-sm font-bold text-white flex items-center space-x-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Featured Evidence-Verified Gear</span>
+                <span>Featured Sample Hardware</span>
               </h3>
               <p className="text-xs text-slate-400">
-                Products with 100% verified manufacturer specs and low QC risk
+                Sample products with structured specifications and policy terms
               </p>
             </div>
             <Link to="/discover" className="text-xs text-electric-400 hover:underline">
@@ -311,8 +314,8 @@ export default function DashboardPage() {
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-navy-950/80 backdrop-blur-sm text-[10px] font-bold text-electric-300 border border-navy-750">
                       {product.tag}
                     </span>
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-500/90 text-white text-[10px] font-bold">
-                      {product.evidence.overallConfidenceScore}% Score
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-navy-900/90 text-slate-300 text-[10px] font-medium border border-navy-750">
+                      Sample Data
                     </span>
                   </div>
 
@@ -327,11 +330,11 @@ export default function DashboardPage() {
                 <div className="mt-4 pt-3 border-t border-navy-800/80 flex items-center justify-between">
                   <div>
                     <span className="text-sm font-black font-mono text-white">
-                      ${product.price.toFixed(2)}
+                      {formatCurrency(product.price)}
                     </span>
                     {product.originalPrice > product.price && (
                       <span className="text-[10px] line-through text-slate-500 ml-1.5 font-mono">
-                        ${product.originalPrice.toFixed(2)}
+                        {formatCurrency(product.originalPrice)}
                       </span>
                     )}
                   </div>
@@ -375,7 +378,7 @@ export default function DashboardPage() {
                 <FileKey className="w-4 h-4 text-violet-400" />
                 <span>Recent Purchases</span>
               </h3>
-              <p className="text-xs text-slate-400">PayPal Sandbox verified orders</p>
+              <p className="text-xs text-slate-400">Sample order records</p>
             </div>
             <Link to="/orders" className="text-xs text-electric-400 hover:underline">
               Ledger
@@ -392,7 +395,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-slate-400 text-[11px]">{order.orderId}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-[10px] font-semibold">
                       {order.status}
                     </span>
                   </div>
@@ -406,7 +409,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-200 truncate">{item.title}</p>
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        ${order.total.toFixed(2)} • {order.paymentMethod}
+                        {formatCurrency(order.total)} • {order.paymentMethod}
                       </p>
                     </div>
                   </div>

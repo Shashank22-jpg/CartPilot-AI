@@ -9,15 +9,13 @@ import {
   ShieldCheck,
   Layers,
   ShoppingCart,
-  AlertTriangle,
-  ChevronRight,
   ExternalLink,
   Cpu,
-  Search,
   CheckCircle2,
   Trash2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function AssistantPage() {
   const [searchParams] = useSearchParams();
@@ -35,13 +33,13 @@ export default function AssistantPage() {
   const [thinkingStep, setThinkingStep] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Initial High-Fidelity Multi-turn Conversation
+  // Initial High-Fidelity Multi-turn Conversation with Transparent Sample Labels
   const [messages, setMessages] = useState([
     {
       id: 'msg-1',
       sender: 'assistant',
       timestamp: '12:00 PM',
-      text: 'Hello Alex! I am your CartPilot AI shopping agent. I analyze product specifications against manufacturer whitepapers, check return policies for hidden restocking fees, and ensure all purchases stay within your $2,500 monthly budget limit. What hardware or gear can I evaluate for you today?',
+      text: `Hello Alex! I am your CartPilot AI shopping agent prototype. I can compare structured specifications, check return policies for restocking conditions, and safeguard your monthly budget of ${formatCurrency(budget.monthlyLimit)}. What hardware or gear can I evaluate for you today?`,
       activityLog: null,
       recommendations: null,
       comparison: null,
@@ -59,15 +57,15 @@ export default function AssistantPage() {
       id: 'msg-3',
       sender: 'assistant',
       timestamp: '12:01 PM',
-      text: 'I have conducted a comparative verification of the Sony WH-1000XM5 and Bose QuietComfort Ultra based on RTINGS lab acoustic tests, manufacturer whitepapers, and certified return policies. Here is my evidence-backed assessment:',
+      text: 'I evaluated the sample specifications for the Sony WH-1000XM5 and Bose QuietComfort Ultra based on published acoustic benchmarks and sample manufacturer terms. Here is the comparative assessment:',
       activityLog: [
-        'Verified: Sony XM5 30-hour battery life confirmed via FCC test telemetry.',
-        'Verified: Bose QuietComfort Ultra CustomTune 32dB low-frequency attenuation verified.',
-        'Policy Check: Bose offers an unprecedented 90-day risk-free in-home trial vs. Sony 30 days.',
-        'Budget Check: Both headphones fit well within your remaining $1,100.32 monthly budget envelope.',
+        'Sample Telemetry: Sony XM5 30-hour battery life confirmed via FCC test filing.',
+        'Sample Telemetry: Bose QuietComfort Ultra CustomTune 32dB low-frequency attenuation.',
+        'Policy Check: Bose offers 90-day trial period vs. Sony 30-day window in sample terms.',
+        `Budget Check: Both headphones fit comfortably within your remaining ${formatCurrency(budget.monthlyLimit - budget.spentThisMonth)} monthly budget.`,
       ],
       comparison: {
-        title: 'Sony WH-1000XM5 vs. Bose QuietComfort Ultra',
+        title: 'Sony WH-1000XM5 vs. Bose QuietComfort Ultra (Sample Comparison)',
         items: [
           {
             product: products.find(p => p.id === 'prod-sony-wh1000xm5') || products[0],
@@ -119,11 +117,11 @@ export default function AssistantPage() {
     setThinkingStep('Analyzing natural language requirements and constraints...');
 
     setTimeout(() => {
-      setThinkingStep('Scanning verified specification database and whitepapers...');
+      setThinkingStep('Scanning structured specification database (sample catalogue)...');
     }, 700);
 
     setTimeout(() => {
-      setThinkingStep('Auditing seller credentials and return policy fine-print...');
+      setThinkingStep('Auditing sample merchant terms and return policy conditions...');
     }, 1400);
 
     setTimeout(() => {
@@ -137,33 +135,33 @@ export default function AssistantPage() {
 
       if (lower.includes('laptop') || lower.includes('macbook') || lower.includes('xps') || lower.includes('dev')) {
         matchedProducts = products.filter(p => p.category === 'Laptops');
-        replyText = 'I analyzed the engineering specifications and sustained thermal throttling benchmarks for our verified laptops. Here is how the Apple MacBook Pro 14" (M3 Pro) compares to the Dell XPS 15 OLED:';
+        replyText = 'Here is how the Apple MacBook Pro 14" (M3 Pro) compares to the Dell XPS 15 OLED based on structured sample benchmarks:';
         logs = [
-          'Benchmarked: M3 Pro Cinebench R24 multi-core scored 1,048 with 0% thermal drop.',
-          'Benchmarked: Dell XPS 15 13700H provides 32GB modular RAM and 3.5K OLED touch.',
-          'Risk Note: MacBook return window is strictly 14 days, while Dell allows 30 days.',
+          'Sample Benchmark: M3 Pro Cinebench R24 multi-core scored 1,048 with 0% thermal drop.',
+          'Sample Benchmark: Dell XPS 15 13700H provides 32GB modular RAM and 3.5K OLED touch.',
+          'Policy Check: MacBook sample return window is 14 days, while Dell allows 30 days.',
         ];
       } else if (lower.includes('drone') || lower.includes('camera') || lower.includes('dji')) {
         matchedProducts = products.filter(p => p.category === 'Cameras & Drones');
-        replyText = 'I have evaluated the DJI Mini 4 Pro Fly More Combo against USA FAA regulatory guidelines and independent wind tunnel tests:';
+        replyText = 'I evaluated the DJI Mini 4 Pro Fly More Combo against regulatory guidelines and sample wind tunnel data:';
         logs = [
-          'Regulatory: Sub-249g takeoff weight exempts drone from recreational FAA registration.',
-          'Safety: Omnidirectional Active Vision obstacle sensors verified with 99.4% branch avoidance.',
-          'Notice: Standard 14-day return policy requires unbinding DJI account prior to return.',
+          'Regulatory: Sub-249g takeoff weight exempts drone from recreational registration requirements.',
+          'Safety: Omnidirectional Active Vision obstacle sensors verified with 99.4% branch avoidance in tests.',
+          'Notice: Standard 14-day sample return policy requires unbinding DJI account prior to return.',
         ];
       } else if (lower.includes('keyboard') || lower.includes('keychron')) {
         matchedProducts = products.filter(p => p.category === 'Keyboards');
-        replyText = 'Here is the verified hardware analysis for the Keychron Q1 Pro custom mechanical keyboard:';
+        replyText = 'Here is the hardware analysis for the Keychron Q1 Pro custom mechanical keyboard:';
         logs = [
-          'Verified: Full CNC 6063 Aluminum chassis weighs 1.73kg with acoustic silicone gaskets.',
-          'Firmware: Full open-source QMK/VIA key remapping verified directly in browser.',
+          'Chassis: Full CNC 6063 Aluminum chassis weighs 1.73kg with acoustic silicone gaskets.',
+          'Firmware: Open-source QMK/VIA key remapping supported directly in browser.',
         ];
       } else {
         matchedProducts = products.slice(0, 2);
-        replyText = `Based on your request "${textToSend}", I have matched the top verified equipment satisfying your requirements within your monthly budget cap of $${budget.monthlyLimit}:`;
+        replyText = `Based on your query "${textToSend}", here are recommended items from our sample inventory within your ${formatCurrency(budget.monthlyLimit)} budget cap:`;
         logs = [
-          'Verified specs against independent engineering whitepapers.',
-          'Confirmed active seller authorization and zero restocking fee return window.',
+          'Matched specifications against sample hardware catalogue.',
+          'Confirmed active merchant logistics tier and return window.',
         ];
       }
 
@@ -182,9 +180,9 @@ export default function AssistantPage() {
 
   const promptSuggestions = [
     'Compare Sony WH-1000XM5 vs. Bose QC Ultra for travel',
-    'Best laptop for heavy Docker & React development under $2,000',
+    'Best laptop for heavy software development under ₹2,00,000',
     'Evaluate return policy and OLED burn-in warranty for LG UltraGear',
-    'Does the DJI Mini 4 Pro require FAA registration?',
+    'Does the DJI Mini 4 Pro require recreational registration?',
   ];
 
   const clearChat = () => {
@@ -193,7 +191,7 @@ export default function AssistantPage() {
         id: `msg-${Date.now()}`,
         sender: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        text: 'Chat history reset. How can I assist your product discovery and verification today?',
+        text: 'Chat history reset. How can I assist your product discovery and specification review today?',
         activityLog: null,
         recommendations: null,
       }
@@ -213,12 +211,12 @@ export default function AssistantPage() {
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-sm font-bold text-white">CartPilot Autonomous Shopping Agent</h2>
-              <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full">
-                Evidence Engine Active
+              <span className="px-2 py-0.5 text-[10px] font-semibold bg-electric-500/10 border border-electric-500/30 text-electric-300 rounded-full">
+                Simulated Dialog
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Tool Calling • Specification Cross-Referencing • Warranty Fine-Print Auditing
+              Tool Calling Framework • Specification Review • Sample Return Terms
             </p>
           </div>
         </div>
@@ -264,7 +262,7 @@ export default function AssistantPage() {
             >
               <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
                 <span className="font-semibold text-slate-300">
-                  {msg.sender === 'user' ? 'Alex Mercer' : 'CartPilot Agent'}
+                  {msg.sender === 'user' ? 'Alex Mercer (Demo Profile)' : 'CartPilot Agent'}
                 </span>
                 <span>{msg.timestamp}</span>
               </div>
@@ -276,7 +274,7 @@ export default function AssistantPage() {
                 <div className="p-3 rounded-xl bg-navy-950/80 border border-navy-800 space-y-1.5 font-mono text-[11px]">
                   <div className="flex items-center space-x-1.5 text-electric-400 font-semibold mb-1">
                     <Cpu className="w-3.5 h-3.5" />
-                    <span>Agent Activity & Verification Trace</span>
+                    <span>Sample Agent Activity & Verification Trace</span>
                   </div>
                   {msg.activityLog.map((log, i) => (
                     <div key={i} className="flex items-start space-x-2 text-slate-300">
@@ -306,7 +304,7 @@ export default function AssistantPage() {
                           />
                           <div className="min-w-0 flex-1">
                             <span className="font-bold text-white block truncate">{item.product.brand}</span>
-                            <span className="text-emerald-400 font-mono">${item.product.price}</span>
+                            <span className="text-emerald-400 font-mono">{formatCurrency(item.product.price)}</span>
                           </div>
                         </div>
                         <p className="text-[11px] text-slate-300">
@@ -325,8 +323,8 @@ export default function AssistantPage() {
               {msg.recommendations && (
                 <div className="space-y-2 pt-2">
                   <span className="text-[11px] font-bold uppercase text-slate-400 tracking-wider flex items-center space-x-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Verified Hardware Matches</span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-electric-400" />
+                    <span>Sample Hardware Matches</span>
                   </span>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -349,9 +347,9 @@ export default function AssistantPage() {
                               {prod.title}
                             </h4>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className="font-mono font-bold text-white">${prod.price}</span>
-                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 rounded">
-                                {prod.evidence.overallConfidenceScore}% verified
+                              <span className="font-mono font-bold text-white">{formatCurrency(prod.price)}</span>
+                              <span className="text-[10px] text-slate-400 bg-navy-950 px-1.5 rounded border border-navy-800">
+                                Sample Data
                               </span>
                             </div>
                           </div>
@@ -439,7 +437,7 @@ export default function AssistantPage() {
           type="text"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Ask CartPilot: e.g. 'Evaluate return terms for Apple Watch Ultra 2' or 'Find headphones with multipoint LDAC'..."
+          placeholder="Ask CartPilot: e.g. 'Compare Sony WH-1000XM5 vs. Bose QC Ultra' or 'Evaluate return policy for LG monitor'..."
           disabled={isThinking}
           className="w-full bg-navy-900 border border-navy-750 focus:border-electric-500 rounded-2xl pl-4 pr-24 py-3.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors disabled:opacity-50"
         />

@@ -12,6 +12,7 @@ import {
   Save,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function SettingsPage() {
   const {
@@ -28,10 +29,10 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({
     name: 'Alex Mercer',
     email: 'alex.mercer@cartpilot.ai',
-    address: '450 Mission Street, Suite 1200',
-    city: 'San Francisco',
-    state: 'CA',
-    postalCode: '94105',
+    address: 'Indiranagar 100ft Road, Stage 2',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    postalCode: '560038',
   });
 
   const [localBudget, setLocalBudget] = useState(budget.monthlyLimit);
@@ -160,14 +161,14 @@ export default function SettingsPage() {
                   Monthly Budget Limit
                 </label>
                 <span className="font-mono font-bold text-white text-sm">
-                  ${localBudget}
+                  {formatCurrency(localBudget)}
                 </span>
               </div>
               <input
                 type="range"
-                min="500"
-                max="5000"
-                step="100"
+                min="25000"
+                max="500000"
+                step="5000"
                 value={localBudget}
                 onChange={(e) => setLocalBudget(Number(e.target.value))}
                 className="w-full accent-electric-500 bg-navy-950"
@@ -196,7 +197,7 @@ export default function SettingsPage() {
                 className="w-full accent-amber-400 bg-navy-950"
               />
               <p className="text-[11px] text-slate-400 mt-2">
-                Alerts trigger when spending reaches {localThreshold}% of ceiling (${((localBudget * localThreshold) / 100).toFixed(0)}).
+                Alerts trigger when spending reaches {localThreshold}% of ceiling ({formatCurrency((localBudget * localThreshold) / 100)}).
               </p>
             </div>
           </div>
@@ -238,6 +239,22 @@ export default function SettingsPage() {
                 <option value="Strict (Verified only)">Strict (Independent Lab & Whitepapers Only)</option>
                 <option value="Standard">Standard (Authorized Retailer Claims Accepted)</option>
               </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+                Base Operating Currency
+              </label>
+              <select
+                value={budget.currency || 'INR'}
+                onChange={(e) => setBudget(prev => ({ ...prev, currency: e.target.value }))}
+                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
+              >
+                <option value="INR">INR (₹) - Indian Rupee (Default Base)</option>
+                <option value="USD" disabled>USD ($) - US Dollar (Multi-currency planned)</option>
+                <option value="EUR" disabled>EUR (€) - Euro (Multi-currency planned)</option>
+              </select>
+              <p className="text-[10px] text-slate-500 mt-1">Default currency is locked to INR for accurate GST & threshold calculations.</p>
             </div>
           </div>
         </div>

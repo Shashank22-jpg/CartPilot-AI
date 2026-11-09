@@ -15,6 +15,7 @@ import {
   Award,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/currency';
 
 export default function PassportPage() {
   const navigate = useNavigate();
@@ -33,20 +34,20 @@ export default function PassportPage() {
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-semibold mb-2">
             <FileKey className="w-3.5 h-3.5 text-violet-400" />
-            <span>Immutable Ownership & Guarantee Registry</span>
+            <span>Ownership & Guarantee Registry (Demo Environment)</span>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Digital Purchase Passports
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Cryptographic proof of purchase, verified serial numbers, live return window countdowns, and automated warranty claims.
+            Sample proof-of-purchase records, simulated serial numbers, live return window countdowns, and automated warranty claim assist.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs text-slate-400">
           <span className="px-3 py-1.5 rounded-xl bg-navy-950 border border-navy-800 font-mono text-emerald-400 flex items-center space-x-1.5">
             <ShieldCheck className="w-4 h-4" />
-            <span>{passports.length} Passports Verified</span>
+            <span>{passports.length} Sample Passports</span>
           </span>
         </div>
       </div>
@@ -131,8 +132,8 @@ export default function PassportPage() {
                     <h3 className="text-base font-extrabold text-white">
                       Digital Purchase Passport
                     </h3>
-                    <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full">
-                      Authentic
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-violet-500/10 border border-violet-500/30 text-violet-300 rounded-full">
+                      Demo Record
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 font-mono mt-0.5">
@@ -146,7 +147,7 @@ export default function PassportPage() {
                 <QrCode className="w-9 h-9 text-slate-300" />
                 <div className="text-[10px] font-mono text-slate-400 leading-tight">
                   <span className="text-slate-300 block font-bold">CartPilot Protocol</span>
-                  <span>SHA-256 Verified</span>
+                  <span>Demo Attestation</span>
                 </div>
               </div>
             </div>
@@ -154,12 +155,12 @@ export default function PassportPage() {
             {/* Product & Ownership Information */}
             <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-4 rounded-xl bg-navy-950/60 border border-navy-800 space-y-1">
-                <span className="text-slate-400 text-[10px] block">Verified Hardware Item</span>
+                <span className="text-slate-400 text-[10px] block">Hardware Item (Sample)</span>
                 <span className="text-white font-bold text-sm block">
                   {selectedPassport.productTitle}
                 </span>
                 <span className="text-slate-400 text-[11px] block">
-                  Purchase Price: <strong className="text-white font-mono">${selectedPassport.purchasePrice.toFixed(2)}</strong>
+                  Purchase Price: <strong className="text-white font-mono">{formatCurrency(selectedPassport.purchasePrice)}</strong>
                 </span>
               </div>
 

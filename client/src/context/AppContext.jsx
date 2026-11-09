@@ -6,7 +6,7 @@ import apiService from '../services/api';
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  // Sidebar State
+  // Sidebar State (Desktop Collapsed & Mobile Open Drawer)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem('cp_sidebar_collapsed');
@@ -16,12 +16,18 @@ export function AppProvider({ children }) {
     }
   });
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   const toggleSidebar = () => {
     setSidebarCollapsed(prev => {
       const next = !prev;
       localStorage.setItem('cp_sidebar_collapsed', JSON.stringify(next));
       return next;
     });
+  };
+
+  const toggleMobileSidebar = () => {
+    setMobileSidebarOpen(prev => !prev);
   };
 
   // Toast Notification State
@@ -87,21 +93,21 @@ export function AppProvider({ children }) {
     showToast('Shopping cart cleared', 'info');
   }, [showToast]);
 
-  // Cart Financials
+  // Cart Financials in INR
   const cartFinancials = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-    const taxRate = 0.0825; // standard sample sales tax
-    const tax = subtotal * taxRate;
-    const shipping = subtotal > 150 || subtotal === 0 ? 0 : 15.00;
+    const taxRate = 0.18; // standard GST rate
+    const tax = Math.round(subtotal * taxRate);
+    const shipping = subtotal > 10000 || subtotal === 0 ? 0 : 499;
     const total = subtotal + tax + shipping;
     const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
     return {
-      subtotal: Math.round(subtotal * 100) / 100,
-      tax: Math.round(tax * 100) / 100,
+      subtotal,
+      tax,
       shipping,
-      total: Math.round(total * 100) / 100,
-      cartTotal: Math.round(total * 100) / 100,
+      total,
+      cartTotal: total,
       itemCount
     };
   }, [cart]);
@@ -148,11 +154,11 @@ export function AppProvider({ children }) {
   const [orders, setOrders] = useState(mockOrders);
   const [passports, setPassports] = useState(mockPassports);
 
-  // Budget & Preferences
+  // Budget & Preferences (Base currency: INR)
   const [budget, setBudget] = useState({
-    monthlyLimit: 2500,
-    spentThisMonth: 1399.68,
-    currency: 'USD',
+    monthlyLimit: 250000,
+    spentThisMonth: 112490,
+    currency: 'INR',
     alertThresholdPercent: 80,
   });
 
@@ -199,6 +205,9 @@ export function AppProvider({ children }) {
     // Sidebar
     sidebarCollapsed,
     toggleSidebar,
+    mobileSidebarOpen,
+    setMobileSidebarOpen,
+    toggleMobileSidebar,
 
     // Cart
     cart,
