@@ -153,6 +153,16 @@ export const apiService = {
   async getUserProfile(userId) {
     return fetchJson(`/api/auth/profile/${userId}`);
   },
+
+  /**
+   * Update user profile, address, budget, and shopping preferences in Supabase
+   */
+  async updateUserProfile(userId, payload) {
+    return fetchJson(`/api/auth/profile/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 export default apiService;

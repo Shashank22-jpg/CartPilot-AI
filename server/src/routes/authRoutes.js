@@ -152,4 +152,91 @@ router.get('/profile/:userId', async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/auth/profile/:userId
+ * Updates user profile, address, budget, and shopping preferences in Supabase public.profiles
+ */
+router.put('/profile/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const {
+      fullName,
+      phone,
+      shippingAddress,
+      monthlyBudgetLimit,
+      alertThresholdPercent,
+      currency,
+      shoppingPreferences,
+    } = req.body;
+
+    if (!isSupabaseConfigured() || !supabaseAdmin) {
+      return res.status(500).json({
+        success: false,
+        error: 'Supabase server configuration is unavailable.',
+      });
+    }
+
+    const updates = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (fullName !== undefined) updates.full_name = fullName.trim();
+    if (phone !== undefined) updates.phone = phone.trim();
+    if (shippingAddress !== undefined) updates.shipping_address = shippingAddress;
+    if (monthlyBudgetLimit !== undefined && !isNaN(Number(monthlyBudgetLimit))) {
+      updates.monthly_budget_limit = Number(monthlyBudgetLimit);
+    }
+    if (alertThresholdPercent !== undefined && !isNaN(Number(alertThresholdPercent))) {
+      updates.alert_threshold_percent = Number(alertThresholdPercent);
+    }
+    if (currency !== undefined) updates.currency = currency;
+    if (shoppingPreferences !== undefined) updates.shopping_preferences = shoppingPreferences;
+
+    // First try update; if no rows affected (e.g. profile row hasn't been created yet), upsert it
+    const { data: updatedData, error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .maybeSingle();
+
+    if (updateError) {
+      console.warn('[Auth API] Profile update error:', updateError.message);
+      throw updateError;
+    }
+
+    if (!updatedData) {
+      // Upsert if not yet existing
+      const { data: upsertData, error: upsertError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: req.body.email || `${userId}@cartpilot.ai`,
+          ...updates,
+        })
+        .select()
+        .single();
+
+      if (upsertError) throw upsertError;
+      return res.status(200).json({
+        success: true,
+        message: 'Profile created and updated successfully.',
+        profile: upsertData,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully.',
+      profile: updatedData,
+    });
+  } catch (err) {
+    console.error('[Auth API] Profile update error:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to update user profile.',
+    });
+  }
+});
+
 export default router;
