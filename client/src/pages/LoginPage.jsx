@@ -55,19 +55,11 @@ export default function LoginPage() {
     const trimmedId = identifier.trim();
 
     if (!trimmedId) {
-      newErrors.identifier = 'Email address or phone number is required.';
-    } else if (trimmedId.includes('@')) {
-      // Basic RFC email check
+      newErrors.identifier = 'Email address is required.';
+    } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(trimmedId)) {
         newErrors.identifier = 'Please enter a valid email address.';
-      }
-    } else {
-      // Phone number check (digits, optional leading +)
-      const cleanPhone = trimmedId.replace(/[^0-9+]/g, '');
-      const digitsOnly = cleanPhone.replace(/[^0-9]/g, '');
-      if (digitsOnly.length < 10) {
-        newErrors.identifier = 'Please enter a valid phone number (at least 10 digits).';
       }
     }
 
@@ -140,7 +132,12 @@ export default function LoginPage() {
         `Password reset instructions have been dispatched to ${resetEmail}. Check your inbox.`
       );
     } catch (err) {
-      setResetError(err.message || 'Failed to send password reset email.');
+      console.warn('[LoginPage] Reset password error:', err.message);
+      if (err.message?.toLowerCase().includes('rate limit')) {
+        setResetError('Supabase email rate limit exceeded. Please wait a few minutes before requesting another reset email.');
+      } else {
+        setResetError(err.message || 'Failed to send password reset email.');
+      }
     } finally {
       setResetSubmitting(false);
     }
@@ -190,26 +187,22 @@ export default function LoginPage() {
               htmlFor="login-identifier"
               className="block text-xs font-semibold text-slate-300"
             >
-              Email or Phone Number
+              Email Address
             </label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                {identifier.includes('@') ? (
-                  <Mail className="w-4 h-4" />
-                ) : (
-                  <Phone className="w-4 h-4" />
-                )}
+                <Mail className="w-4 h-4" />
               </div>
               <input
                 id="login-identifier"
-                type="text"
+                type="email"
                 autoComplete="username"
                 value={identifier}
                 onChange={(e) => {
                   setIdentifier(e.target.value);
                   if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: null }));
                 }}
-                placeholder="name@domain.com or +919876543210"
+                placeholder="name@domain.com"
                 disabled={isSubmitting}
                 className={`w-full bg-navy-950/90 border rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors ${
                   errors.identifier

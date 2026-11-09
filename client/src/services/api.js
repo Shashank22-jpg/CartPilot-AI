@@ -136,6 +136,23 @@ export const apiService = {
   async getOrderDetails(orderId) {
     return fetchJson(`/api/payments/order/${orderId}`);
   },
+
+  /**
+   * Register new account with Supabase Auth and save profile
+   */
+  async registerUser(payload) {
+    return fetchJson('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Retrieve user profile from Supabase
+   */
+  async getUserProfile(userId) {
+    return fetchJson(`/api/auth/profile/${userId}`);
+  },
 };
 
 export default apiService;

@@ -4,11 +4,13 @@ import aiRoutes from './aiRoutes.js';
 import productRoutes from './productRoutes.js';
 import paypalRoutes from './paypalRoutes.js';
 import orderRoutes from './orderRoutes.js';
+import authRoutes from './authRoutes.js';
 
 const apiRouter = Router();
 
 // Register sub-routers
 apiRouter.use('/', healthRoutes);
+apiRouter.use('/auth', authRoutes);
 apiRouter.use('/ai', aiRoutes);
 apiRouter.use('/products', productRoutes);
 apiRouter.use('/paypal', paypalRoutes);

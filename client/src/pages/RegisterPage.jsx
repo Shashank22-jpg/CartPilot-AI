@@ -16,7 +16,8 @@ import {
   Check,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { signUpWithEmail } from '../services/supabase';
+import { signUpWithEmail, signInWithEmail } from '../services/supabase';
+import apiService from '../services/api';
 
 // Common country dialing codes
 const COUNTRY_CODES = [
@@ -133,32 +134,43 @@ export default function RegisterPage() {
     const fullPhoneNumber = `${countryCode}${phone.replace(/[^0-9]/g, '')}`;
 
     try {
-      const { data, error } = await signUpWithEmail(email, password, {
+      // 1. Create real Supabase Auth user via backend API
+      // Persists user into auth.users with email_confirm: true (postponing email OTP)
+      // and immediately inserts full_name and phone into public.profiles
+      const regRes = await apiService.registerUser({
         fullName: fullName.trim(),
-        full_name: fullName.trim(),
+        email: email.trim(),
         phone: fullPhoneNumber,
+        password,
       });
 
-      if (error) {
-        throw error;
+      if (!regRes.success) {
+        throw new Error(regRes.error || 'Registration failed.');
       }
 
-      if (data?.session) {
-        showToast('Registration successful! Welcome to CartPilot AI.', 'success');
-        navigate('/dashboard', { replace: true });
-      } else if (data?.user) {
-        // Confirmation required or account created
+      // 2. Establish live authenticated session via Supabase browser client
+      const { data: signInData, error: signInError } = await signInWithEmail(email.trim(), password);
+
+      if (signInError) {
+        console.warn('[RegisterPage] Auto sign-in error:', signInError.message);
         setRegistrationSuccess({
-          email: data.user.email || email,
-          userId: data.user.id,
+          email: email.trim(),
+          userId: regRes.user?.id,
         });
         showToast('Account created successfully!', 'success');
+      } else if (signInData?.user) {
+        showToast('Registration successful! Welcome to CartPilot AI.', 'success');
+        navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       console.warn('[RegisterPage] Registration error:', err.message);
       let friendly = err.message || 'Registration could not be completed. Please try again.';
-      if (err.message?.includes('User already registered')) {
-        friendly = 'An account with this email address already exists. Please sign in instead.';
+      if (
+        err.message?.toLowerCase().includes('already') ||
+        err.message?.toLowerCase().includes('registered') ||
+        err.message?.toLowerCase().includes('exists')
+      ) {
+        friendly = 'A user with this email address has already been registered. Please sign in instead.';
       } else if (err.message?.includes('Password should be')) {
         friendly = 'Password does not satisfy Supabase security criteria. Please use at least 8 characters with numbers and symbols.';
       }
