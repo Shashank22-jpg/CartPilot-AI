@@ -1,57 +1,61 @@
 /**
  * CartPilot AI - Currency & Financial Formatting System
- * Uses Intl.NumberFormat for standards-compliant locale and currency formatting.
- * Base currency for all internal calculations is INR (Indian Rupee).
+ * Standardized on USD ($) for Aptdot unified catalogue and PayPal Sandbox processing.
  */
 
 export const SUPPORTED_CURRENCIES = {
-  INR: {
-    code: 'INR',
-    symbol: '₹',
-    locale: 'en-IN',
-    name: 'Indian Rupee',
-    rateFromINR: 1.0,
-  },
   USD: {
     code: 'USD',
     symbol: '$',
     locale: 'en-US',
     name: 'US Dollar',
-    rateFromINR: 0.012,
   },
   EUR: {
     code: 'EUR',
     symbol: '€',
     locale: 'de-DE',
     name: 'Euro',
-    rateFromINR: 0.011,
+  },
+  INR: {
+    code: 'INR',
+    symbol: '₹',
+    locale: 'en-IN',
+    name: 'Indian Rupee',
   },
 };
 
-export const DEFAULT_CURRENCY = 'INR';
+export const DEFAULT_CURRENCY = 'USD';
 
 /**
  * Format an amount in the designated currency using Intl.NumberFormat.
- * @param {number} amount - Numeric amount in base currency (INR)
- * @param {string} currencyCode - ISO currency code ('INR', 'USD', etc.)
- * @param {Intl.NumberFormatOptions} [options] - Optional overrides for Intl.NumberFormat
- * @returns {string} Formatted currency string (e.g. "₹28,990" or "₹28,990.00")
+ * @param {number} amount - Numeric amount in designated currency
+ * @param {string} currencyCode - ISO currency code ('USD', 'EUR', etc.)
+ * @param {Intl.NumberFormatOptions} [options] - Overrides
+ * @returns {string} Formatted currency string (e.g. "$89.00")
  */
 export function formatCurrency(amount, currencyCode = DEFAULT_CURRENCY, options = {}) {
   const numericVal = typeof amount === 'number' && !Number.isNaN(amount) ? amount : 0;
   const config = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES[DEFAULT_CURRENCY];
 
-  // Convert if target currency differs from base (INR)
-  const convertedAmount = currencyCode === 'INR' ? numericVal : numericVal * (config.rateFromINR || 1);
+  const defaultDecimals = Number.isInteger(numericVal) ? 0 : 2;
 
-  // Standard Indian numbering (lakhs/crores) formatted via en-IN
   return new Intl.NumberFormat(config.locale, {
     style: 'currency',
     currency: config.code,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: options.minimumFractionDigits !== undefined ? options.minimumFractionDigits : defaultDecimals,
+    maximumFractionDigits: options.maximumFractionDigits !== undefined ? options.maximumFractionDigits : defaultDecimals,
     ...options,
-  }).format(convertedAmount);
+  }).format(numericVal);
+}
+
+/**
+ * Format product price based on product.currency and product.price (Default USD)
+ */
+export function formatProductPrice(product, options = {}) {
+  if (!product) return '$0';
+  const currency = product.currency || DEFAULT_CURRENCY;
+  const price = typeof product.price === 'number' ? product.price : Number(product.price) || 0;
+  return formatCurrency(price, currency, options);
 }
 
 /**
@@ -66,6 +70,7 @@ export function formatCurrencyWithDecimals(amount, currencyCode = DEFAULT_CURREN
 
 export default {
   formatCurrency,
+  formatProductPrice,
   formatCurrencyWithDecimals,
   SUPPORTED_CURRENCIES,
   DEFAULT_CURRENCY,

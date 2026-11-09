@@ -26,6 +26,14 @@ import { formatCurrency } from '../utils/currency';
 import apiService from '../services/api';
 import { resetPasswordForEmail } from '../services/supabase';
 
+/**
+ * SettingsPage - Customer Account & Configuration
+ * Emporium Light Shopping Architecture:
+ * - Clean white cards, subtle borders, emerald accents
+ * - Dark forest ink typography
+ * - Standardized on USD ($) base currency
+ * - Budget guardrails, shopping preferences, notifications, and security controls
+ */
 export default function SettingsPage() {
   const {
     budget,
@@ -34,6 +42,7 @@ export default function SettingsPage() {
     setPreferences,
     showToast,
     user,
+    userProfile,
     logout,
     orders,
     passports,
@@ -41,18 +50,17 @@ export default function SettingsPage() {
 
   // 1. Personal Profile State
   const [profile, setProfile] = useState({
-    fullName: user?.user_metadata?.full_name || 'Alex Mercer',
-    email: user?.email || 'alex.mercer@cartpilot.ai',
-    phone: user?.user_metadata?.phone || '+91 98765 43210',
-    street: 'Indiranagar 100ft Road, Stage 2',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    postalCode: '560038',
-    country: 'India',
+    fullName: userProfile?.full_name || user?.user_metadata?.full_name || '',
+    email: userProfile?.email || user?.email || '',
+    phone: userProfile?.phone || user?.user_metadata?.phone || '',
+    street: userProfile?.shipping_address?.street || '',
+    city: userProfile?.shipping_address?.city || 'San Jose',
+    state: userProfile?.shipping_address?.state || 'CA',
+    postalCode: userProfile?.shipping_address?.postalCode || '95131',
+    country: userProfile?.shipping_address?.country || 'United States',
   });
 
   // 2. Shopping Preferences State
-  // Priorities: Price, Durability, Performance, Verified Specifications, Balanced
   const [priority, setPriority] = useState(
     preferences?.priority?.includes('Durability')
       ? 'Durability'
@@ -61,16 +69,14 @@ export default function SettingsPage() {
       : 'Verified Specifications'
   );
 
-  // Evidence Preference: Standard, Strict
   const [evidenceFilter, setEvidenceFilter] = useState(
     preferences?.riskThreshold?.includes('Strict') ? 'Strict' : 'Standard'
   );
 
-  // Currency: INR default
-  const [currency, setCurrency] = useState(budget.currency || 'INR');
+  const [currency, setCurrency] = useState(budget.currency || 'USD');
 
   // Budget Sliders
-  const [localBudget, setLocalBudget] = useState(budget.monthlyLimit || 250000);
+  const [localBudget, setLocalBudget] = useState(budget.monthlyLimit || 3000);
   const [localThreshold, setLocalThreshold] = useState(budget.alertThresholdPercent || 80);
 
   // 3. Notification Preferences State
@@ -78,7 +84,7 @@ export default function SettingsPage() {
     returnDeadlines: true,
     warrantyExpirations: true,
     priceDropAlerts: true,
-    smsWhatsApp: false, // coming soon in OTP phase
+    smsWhatsApp: false,
   });
 
   // 4. Privacy & Security State
@@ -95,63 +101,43 @@ export default function SettingsPage() {
     'Balanced': 'Harmonizes price, verified quality, and manufacturer support for everyday smart shopping.',
   };
 
-  // Evidence filter definitions
   const evidenceDescriptions = {
-    'Standard': 'Standard (Authorized Retailer Claims Accepted) — Accepts verified manufacturer specifications and official retailer listings.',
-    'Strict': 'Strict (Verified only) — Requires independent laboratory testing, accredited whitepapers, and verified benchmarks before recommending.',
+    'Standard': 'Evaluates manufacturer datasheets, verified vendor credentials, and standard commercial benchmarks.',
+    'Strict': 'Requires independent third-party hardware test reports, verifiable certifications, and strict warranty audits.',
   };
 
-  // Sync profile when user changes or load from Supabase
+  // Sync profile when user profile loads
   useEffect(() => {
-    if (user) {
-      setProfile((prev) => ({
-        ...prev,
-        fullName: user.user_metadata?.full_name || prev.fullName,
-        email: user.email || prev.email,
-        phone: user.user_metadata?.phone || prev.phone,
-      }));
+    if (userProfile || user) {
+      setProfile({
+        fullName: userProfile?.full_name || user?.user_metadata?.full_name || '',
+        email: userProfile?.email || user?.email || '',
+        phone: userProfile?.phone || user?.user_metadata?.phone || '',
+        street: userProfile?.shipping_address?.street || '',
+        city: userProfile?.shipping_address?.city || 'San Jose',
+        state: userProfile?.shipping_address?.state || 'CA',
+        postalCode: userProfile?.shipping_address?.postalCode || '95131',
+        country: userProfile?.shipping_address?.country || 'United States',
+      });
 
-      // Fetch user profile from Supabase public.profiles if exists
-      if (user.id) {
-        apiService
-          .getUserProfile(user.id)
-          .then((res) => {
-            if (res?.profile) {
-              const p = res.profile;
-              setProfile((prev) => ({
-                ...prev,
-                fullName: p.full_name || prev.fullName,
-                phone: p.phone || prev.phone,
-                street: p.shipping_address?.street || prev.street,
-                city: p.shipping_address?.city || prev.city,
-                state: p.shipping_address?.state || prev.state,
-                postalCode: p.shipping_address?.postalCode || prev.postalCode,
-                country: p.shipping_address?.country || prev.country,
-              }));
-
-              if (p.monthly_budget_limit) {
-                setLocalBudget(Number(p.monthly_budget_limit));
-              }
-              if (p.alert_threshold_percent) {
-                setLocalThreshold(Number(p.alert_threshold_percent));
-              }
-              if (p.currency) {
-                setCurrency(p.currency);
-              }
-              if (p.shopping_preferences) {
-                if (p.shopping_preferences.priority) setPriority(p.shopping_preferences.priority);
-                if (p.shopping_preferences.evidenceFilter) setEvidenceFilter(p.shopping_preferences.evidenceFilter);
-                if (p.shopping_preferences.notifications) setNotifications((prev) => ({ ...prev, ...p.shopping_preferences.notifications }));
-                if (p.shopping_preferences.aiTelemetry !== undefined) setAiTelemetry(Boolean(p.shopping_preferences.aiTelemetry));
-              }
-            }
-          })
-          .catch((err) => {
-            console.warn('[SettingsPage] Could not load profile:', err.message);
-          });
+      if (userProfile?.monthly_budget_limit) {
+        setLocalBudget(Number(userProfile.monthly_budget_limit));
+      }
+      if (userProfile?.alert_threshold_percent) {
+        setLocalThreshold(Number(userProfile.alert_threshold_percent));
+      }
+      if (userProfile?.currency) {
+        setCurrency(userProfile.currency);
+      }
+      if (userProfile?.shopping_preferences) {
+        const sp = userProfile.shopping_preferences;
+        if (sp.priority) setPriority(sp.priority);
+        if (sp.evidenceFilter) setEvidenceFilter(sp.evidenceFilter);
+        if (sp.notifications) setNotifications((prev) => ({ ...prev, ...sp.notifications }));
+        if (sp.aiTelemetry !== undefined) setAiTelemetry(sp.aiTelemetry);
       }
     }
-  }, [user]);
+  }, [user, userProfile]);
 
   // Handle Save Settings
   const handleSaveSettings = async (e) => {
@@ -264,7 +250,7 @@ export default function SettingsPage() {
         budgetStatus: {
           monthlyLimit: localBudget,
           spentThisMonth: budget.spentThisMonth,
-          currency: budget.currency || 'INR',
+          currency: budget.currency || 'USD',
         },
         orderCount: orders?.length || 0,
         orders: orders || [],
@@ -287,18 +273,20 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-4xl mx-auto">
+    <div className="space-y-8 pb-20 max-w-5xl mx-auto">
       {/* Top Banner */}
-      <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-emp-surface-line">
         <div>
-          <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-2">
-            <Settings className="w-3.5 h-3.5 text-electric-400" />
-            <span>Customer Account & Configuration</span>
+          <div className="flex items-center space-x-2">
+            <span className="px-2.5 py-0.5 rounded-pill bg-emp-brand-50 text-emp-brand text-xs font-bold border border-emp-brand-100 flex items-center space-x-1.5">
+              <Settings className="w-3.5 h-3.5" />
+              <span>Customer Account & Configuration</span>
+            </span>
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-emp-ink tracking-tight font-display mt-2">
             Settings & Shopping Preferences
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          </h1>
+          <p className="text-sm text-emp-ink-secondary mt-1">
             Manage your personal profile, shopping intelligence criteria, budget ceilings, notifications, and security.
           </p>
         </div>
@@ -307,7 +295,7 @@ export default function SettingsPage() {
           type="button"
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className="px-5 py-2.5 rounded-xl bg-electric-600 hover:bg-electric-500 text-white text-xs font-bold shadow-glow-blue flex items-center space-x-2 transition-all self-start sm:self-center disabled:opacity-50 cursor-pointer"
+          className="btn-emp btn-emp-primary py-3 px-5 text-xs font-bold inline-flex items-center space-x-2 self-start sm:self-auto cursor-pointer disabled:opacity-50 shadow-emp-sm"
         >
           <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
           <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -316,86 +304,87 @@ export default function SettingsPage() {
 
       <form onSubmit={handleSaveSettings} className="space-y-6">
         {/* SECTION 1: PERSONAL PROFILE & DELIVERY ADDRESS */}
-        <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-navy-800">
-            <div className="flex items-center space-x-2 text-xs font-bold text-white">
-              <User className="w-4 h-4 text-electric-400" />
+        <div className="p-6 rounded-emp bg-white border border-emp-surface-line shadow-emp-sm space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-emp-surface-line">
+            <div className="flex items-center space-x-2 text-sm font-bold text-emp-ink font-display">
+              <User className="w-4 h-4 text-emp-brand" />
               <span>Personal Profile & Delivery Address</span>
             </div>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-navy-800 text-slate-300 border border-navy-700">
+            <span className="text-[11px] px-2.5 py-0.5 rounded-pill bg-emp-brand-50 text-emp-brand font-bold border border-emp-brand-100">
               Verified Identity
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Full Name
               </label>
               <input
                 type="text"
                 value={profile.fullName}
                 onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                placeholder="e.g. Alex Mercer"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm transition-colors"
+                placeholder="Enter your full name"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
-                Email Address
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
+                Email Address (Read-only)
               </label>
               <input
                 type="email"
                 value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                placeholder="alex@example.com"
+                readOnly
+                disabled
+                className="w-full bg-emp-surface-tint border border-emp-surface-line rounded-emp px-3.5 py-2.5 text-xs text-emp-ink-muted cursor-not-allowed"
+                placeholder="name@domain.com"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Phone Number
               </label>
               <input
                 type="tel"
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                placeholder="+91 98765 43210"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm transition-colors"
+                placeholder="+1 408 555 0199"
               />
-              <p className="text-[10px] text-slate-500 mt-1">Used for order tracking alerts and courier delivery verification.</p>
+              <p className="text-[11px] text-emp-ink-muted mt-1">Used for order tracking alerts and courier delivery verification.</p>
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Street Address
               </label>
               <input
                 type="text"
                 value={profile.street}
                 onChange={(e) => setProfile({ ...profile, street: e.target.value })}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                placeholder="Flat / House No., Street, Landmark"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm transition-colors"
+                placeholder="2211 North First Street"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 City
               </label>
               <input
                 type="text"
                 value={profile.city}
                 onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                placeholder="City"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm transition-colors"
+                placeholder="San Jose"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 State & Postal Code
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -403,15 +392,15 @@ export default function SettingsPage() {
                   type="text"
                   value={profile.state}
                   onChange={(e) => setProfile({ ...profile, state: e.target.value })}
-                  className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors"
-                  placeholder="State"
+                  className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm transition-colors"
+                  placeholder="CA"
                 />
                 <input
                   type="text"
                   value={profile.postalCode}
                   onChange={(e) => setProfile({ ...profile, postalCode: e.target.value })}
-                  className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none font-mono transition-colors"
-                  placeholder="PIN Code"
+                  className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none font-mono shadow-emp-sm transition-colors"
+                  placeholder="95131"
                 />
               </div>
             </div>
@@ -419,22 +408,22 @@ export default function SettingsPage() {
         </div>
 
         {/* SECTION 2: SHOPPING PREFERENCES */}
-        <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 space-y-6">
-          <div className="flex items-center space-x-2 text-xs font-bold text-white pb-3 border-b border-navy-800">
-            <Sliders className="w-4 h-4 text-violet-400" />
+        <div className="p-6 rounded-emp bg-white border border-emp-surface-line shadow-emp-sm space-y-6">
+          <div className="flex items-center space-x-2 text-sm font-bold text-emp-ink font-display pb-3 border-b border-emp-surface-line">
+            <Sliders className="w-4 h-4 text-emp-brand" />
             <span>Shopping Preferences</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
             {/* Primary Shopping Priority */}
             <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Primary Shopping Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm"
               >
                 <option value="Price">Price — Lowest landed cost & best value deals</option>
                 <option value="Durability">Durability — Longest build lifespan & warranty coverage</option>
@@ -443,9 +432,9 @@ export default function SettingsPage() {
                 <option value="Balanced">Balanced — Everyday equilibrium of price, rating & reliability</option>
               </select>
 
-              <div className="mt-2 p-2.5 rounded-lg bg-navy-950/60 border border-navy-800/80 flex items-start space-x-2">
-                <Info className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-slate-400 leading-relaxed">
+              <div className="mt-2 p-3 rounded-emp bg-emp-surface-tint border border-emp-surface-line flex items-start space-x-2">
+                <Info className="w-3.5 h-3.5 text-emp-brand shrink-0 mt-0.5" />
+                <p className="text-[11px] text-emp-ink-secondary leading-relaxed">
                   {priorityDescriptions[priority] || priorityDescriptions['Balanced']}
                 </p>
               </div>
@@ -453,79 +442,77 @@ export default function SettingsPage() {
 
             {/* Product Evidence Preference */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Product Evidence Preference
               </label>
               <select
                 value={evidenceFilter}
                 onChange={(e) => setEvidenceFilter(e.target.value)}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm"
               >
                 <option value="Standard">Standard — Verified manufacturer specs & retailer claims</option>
                 <option value="Strict">Strict — Independent lab test results & verified whitepapers</option>
               </select>
-              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-emp-ink-muted mt-1.5 leading-relaxed">
                 {evidenceDescriptions[evidenceFilter]}
               </p>
             </div>
 
             {/* Preferred Currency */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1.5">
+              <label className="text-[11px] font-bold text-emp-ink block mb-1.5 font-display">
                 Preferred Currency
               </label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full bg-navy-950 border border-navy-750 focus:border-electric-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none"
+                className="w-full bg-white border border-emp-surface-line focus:border-emp-brand rounded-emp px-3.5 py-2.5 text-xs text-emp-ink focus:outline-none shadow-emp-sm"
               >
-                <option value="INR">INR (₹) — Indian Rupee (Default Base Currency)</option>
-                <option value="USD" disabled>USD ($) — US Dollar (Coming Soon)</option>
-                <option value="EUR" disabled>EUR (€) — Euro (Coming Soon)</option>
+                <option value="USD">USD ($) — US Dollar (Aptdot Native Base Currency)</option>
               </select>
-              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                Currently set to INR (₹) for accurate India GST (18%), domestic delivery, and PayPal sandbox checkout.
+              <p className="text-[11px] text-emp-ink-muted mt-1.5 leading-relaxed">
+                Standardized on USD ($) for Aptdot unified catalogue and PayPal Sandbox checkout.
               </p>
             </div>
           </div>
 
           {/* Budget & Spend Guardrails Sub-Card */}
-          <div className="pt-4 border-t border-navy-800">
-            <div className="flex items-center space-x-2 text-xs font-bold text-white mb-4">
-              <TrendingUp className="w-4 h-4 text-electric-400" />
+          <div className="pt-4 border-t border-emp-surface-line">
+            <div className="flex items-center space-x-2 text-xs font-bold text-emp-ink font-display mb-4">
+              <TrendingUp className="w-4 h-4 text-emp-brand" />
               <span>Monthly Budget Ceiling & Spend Guardrails</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-semibold text-slate-400">
+                  <label className="text-[11px] font-bold text-emp-ink font-display">
                     Monthly Budget Limit
                   </label>
-                  <span className="font-mono font-bold text-white text-sm">
-                    {formatCurrency(localBudget)}
+                  <span className="font-mono font-bold text-emp-ink text-sm">
+                    {formatCurrency(localBudget, 'USD')}
                   </span>
                 </div>
                 <input
                   type="range"
-                  min="25000"
-                  max="500000"
-                  step="5000"
+                  min="500"
+                  max="10000"
+                  step="100"
                   value={localBudget}
                   onChange={(e) => setLocalBudget(Number(e.target.value))}
-                  className="w-full accent-electric-500 bg-navy-950 cursor-pointer"
+                  className="w-full accent-emp-brand cursor-pointer"
                 />
-                <p className="text-[11px] text-slate-400 mt-2">
-                  CartPilot flags any shopping carts that cause your total monthly spend to exceed {formatCurrency(localBudget)}.
+                <p className="text-[11px] text-emp-ink-muted mt-2">
+                  CartPilot flags any shopping carts that cause your total monthly spend to exceed {formatCurrency(localBudget, 'USD')}.
                 </p>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-semibold text-slate-400">
+                  <label className="text-[11px] font-bold text-emp-ink font-display">
                     Early Warning Alert Threshold
                   </label>
-                  <span className="font-mono font-bold text-amber-400 text-sm">
+                  <span className="font-mono font-bold text-amber-700 text-sm">
                     {localThreshold}%
                   </span>
                 </div>
@@ -536,10 +523,10 @@ export default function SettingsPage() {
                   step="5"
                   value={localThreshold}
                   onChange={(e) => setLocalThreshold(Number(e.target.value))}
-                  className="w-full accent-amber-400 bg-navy-950 cursor-pointer"
+                  className="w-full accent-amber-500 cursor-pointer"
                 />
-                <p className="text-[11px] text-slate-400 mt-2">
-                  Triggers warning alerts once monthly expenditure reaches {localThreshold}% of ceiling ({formatCurrency((localBudget * localThreshold) / 100)}).
+                <p className="text-[11px] text-emp-ink-muted mt-2">
+                  Triggers warning alerts once monthly expenditure reaches {localThreshold}% of ceiling ({formatCurrency((localBudget * localThreshold) / 100, 'USD')}).
                 </p>
               </div>
             </div>
@@ -547,131 +534,95 @@ export default function SettingsPage() {
         </div>
 
         {/* SECTION 3: NOTIFICATION PREFERENCES */}
-        <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 space-y-4">
-          <div className="flex items-center space-x-2 text-xs font-bold text-white pb-3 border-b border-navy-800">
-            <Bell className="w-4 h-4 text-electric-400" />
+        <div className="p-6 rounded-emp bg-white border border-emp-surface-line shadow-emp-sm space-y-4">
+          <div className="flex items-center space-x-2 text-sm font-bold text-emp-ink font-display pb-3 border-b border-emp-surface-line">
+            <Bell className="w-4 h-4 text-emp-brand" />
             <span>Notification & Protection Alerts</span>
           </div>
 
           <div className="space-y-3.5 text-xs">
             {/* Return Deadlines */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/70 border border-navy-800">
+            <div className="flex items-center justify-between p-3.5 rounded-emp bg-emp-surface-tint border border-emp-surface-line">
               <div className="space-y-0.5 pr-4">
-                <span className="font-semibold text-white block">Return Window 3-Day Deadlines</span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="font-bold text-emp-ink block">Return Window 3-Day Deadlines</span>
+                <span className="text-[11px] text-emp-ink-secondary block">
                   Receive proactive alerts 72 hours before your 30-day merchant return window expires.
                 </span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={notifications.returnDeadlines}
-                  onChange={(e) => setNotifications({ ...notifications, returnDeadlines: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-electric-500"></div>
-              </label>
+              <input
+                type="checkbox"
+                checked={notifications.returnDeadlines}
+                onChange={(e) => setNotifications({ ...notifications, returnDeadlines: e.target.checked })}
+                className="w-4 h-4 accent-emp-brand cursor-pointer rounded"
+              />
             </div>
 
             {/* Warranty Expiration Alerts */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/70 border border-navy-800">
+            <div className="flex items-center justify-between p-3.5 rounded-emp bg-emp-surface-tint border border-emp-surface-line">
               <div className="space-y-0.5 pr-4">
-                <span className="font-semibold text-white block">Warranty Expiration Notices</span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="font-bold text-emp-ink block">Warranty Expiration Notices</span>
+                <span className="text-[11px] text-emp-ink-secondary block">
                   Receive notifications 30 days before manufacturer warranties end with one-click claim instructions.
                 </span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={notifications.warrantyExpirations}
-                  onChange={(e) => setNotifications({ ...notifications, warrantyExpirations: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-electric-500"></div>
-              </label>
+              <input
+                type="checkbox"
+                checked={notifications.warrantyExpirations}
+                onChange={(e) => setNotifications({ ...notifications, warrantyExpirations: e.target.checked })}
+                className="w-4 h-4 accent-emp-brand cursor-pointer rounded"
+              />
             </div>
 
             {/* Price Drop & Evidence Updates */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/70 border border-navy-800">
+            <div className="flex items-center justify-between p-3.5 rounded-emp bg-emp-surface-tint border border-emp-surface-line">
               <div className="space-y-0.5 pr-4">
-                <span className="font-semibold text-white block">Price Drop & Evidence Score Updates</span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="font-bold text-emp-ink block">Price Drop & Evidence Score Updates</span>
+                <span className="text-[11px] text-emp-ink-secondary block">
                   Get notified when items in your comparison or cart drop in price or receive new verified lab scores.
                 </span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={notifications.priceDropAlerts}
-                  onChange={(e) => setNotifications({ ...notifications, priceDropAlerts: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-electric-500"></div>
-              </label>
-            </div>
-
-            {/* SMS & WhatsApp Alerts (Coming Soon) */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/40 border border-navy-800/60 opacity-75">
-              <div className="space-y-0.5 pr-4">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-slate-300">SMS & WhatsApp Real-Time Dispatches</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-950/80 text-violet-300 border border-violet-500/30 font-medium">
-                    Coming Soon in OTP Phase
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-500 block">
-                  Direct WhatsApp delivery dispatches and instant warranty passport registration codes.
-                </span>
-              </div>
-              <label className="relative inline-flex items-center cursor-not-allowed shrink-0">
-                <input
-                  type="checkbox"
-                  disabled
-                  checked={false}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800/80 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-600 after:rounded-full after:h-4 after:w-4"></div>
-              </label>
+              <input
+                type="checkbox"
+                checked={notifications.priceDropAlerts}
+                onChange={(e) => setNotifications({ ...notifications, priceDropAlerts: e.target.checked })}
+                className="w-4 h-4 accent-emp-brand cursor-pointer rounded"
+              />
             </div>
           </div>
         </div>
 
         {/* SECTION 4: PRIVACY & SECURITY */}
-        <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 space-y-4">
-          <div className="flex items-center space-x-2 text-xs font-bold text-white pb-3 border-b border-navy-800">
-            <Lock className="w-4 h-4 text-electric-400" />
+        <div className="p-6 rounded-emp bg-white border border-emp-surface-line shadow-emp-sm space-y-4">
+          <div className="flex items-center space-x-2 text-sm font-bold text-emp-ink font-display pb-3 border-b border-emp-surface-line">
+            <Lock className="w-4 h-4 text-emp-brand" />
             <span>Privacy & Security</span>
           </div>
 
           <div className="space-y-4 text-xs">
             {/* AI Recommendation Telemetry */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/70 border border-navy-800">
+            <div className="flex items-center justify-between p-3.5 rounded-emp bg-emp-surface-tint border border-emp-surface-line">
               <div className="space-y-0.5 pr-4">
                 <div className="flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-                  <span className="font-semibold text-white">AI Assistant Telemetry & Personalization</span>
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                  <span className="font-bold text-emp-ink">AI Assistant Telemetry & Personalization</span>
                 </div>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="text-[11px] text-emp-ink-secondary block">
                   Allow Google Gemini AI to analyze your search context to optimize budget and hardware suggestions.
                 </span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={aiTelemetry}
-                  onChange={(e) => setAiTelemetry(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-electric-500"></div>
-              </label>
+              <input
+                type="checkbox"
+                checked={aiTelemetry}
+                onChange={(e) => setAiTelemetry(e.target.checked)}
+                className="w-4 h-4 accent-emp-brand cursor-pointer rounded"
+              />
             </div>
 
             {/* Password Management & Recovery */}
-            <div className="p-3.5 rounded-xl bg-navy-950/70 border border-navy-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-3.5 rounded-emp bg-emp-surface-tint border border-emp-surface-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="font-semibold text-white block">Account Password & Recovery</span>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
+                <span className="font-bold text-emp-ink block">Account Password & Recovery</span>
+                <span className="text-[11px] text-emp-ink-secondary block mt-0.5">
                   Send a secure password reset link to your registered email address ({profile.email}).
                 </span>
               </div>
@@ -679,60 +630,36 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handlePasswordReset}
                 disabled={isResettingPassword}
-                className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-200 hover:text-white border border-navy-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors self-start sm:self-auto cursor-pointer disabled:opacity-50"
+                className="btn-emp btn-emp-secondary py-2 px-3.5 text-xs font-semibold inline-flex items-center space-x-1.5 self-start sm:self-auto cursor-pointer disabled:opacity-50"
               >
-                <Key className={`w-3.5 h-3.5 text-electric-400 ${isResettingPassword ? 'animate-spin' : ''}`} />
+                <Key className={`w-3.5 h-3.5 text-emp-brand ${isResettingPassword ? 'animate-spin' : ''}`} />
                 <span>{isResettingPassword ? 'Sending...' : 'Send Password Reset Link'}</span>
               </button>
             </div>
 
-            {/* Two-Factor Authentication (2FA) */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-navy-950/40 border border-navy-800/60 opacity-75">
-              <div className="space-y-0.5 pr-4">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-slate-300">Two-Factor Authentication (2FA)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-950/80 text-violet-300 border border-violet-500/30 font-medium">
-                    Coming Soon in OTP Phase
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-500 block">
-                  Secure sign-ins with authenticator app (TOTP) or SMS verification.
-                </span>
-              </div>
-              <label className="relative inline-flex items-center cursor-not-allowed shrink-0">
-                <input
-                  type="checkbox"
-                  disabled
-                  checked={false}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-navy-800/80 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-600 after:rounded-full after:h-4 after:w-4"></div>
-              </label>
-            </div>
-
             {/* Encryption & Compliance Badges */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
-              <div className="p-2.5 rounded-xl bg-navy-950/50 border border-navy-800 flex items-center space-x-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="p-3 rounded-emp bg-emp-surface-tint border border-emp-surface-line flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-emp-brand shrink-0" />
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block">Row-Level Security</span>
-                  <span className="text-[10px] text-slate-500 block">Supabase Auth Enforced</span>
+                  <span className="text-[11px] font-bold text-emp-ink block">Row-Level Security</span>
+                  <span className="text-[10px] text-emp-ink-muted block">Supabase Auth Enforced</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-navy-950/50 border border-navy-800 flex items-center space-x-2">
-                <Lock className="w-4 h-4 text-electric-400 shrink-0" />
+              <div className="p-3 rounded-emp bg-emp-surface-tint border border-emp-surface-line flex items-center space-x-2">
+                <Lock className="w-4 h-4 text-emp-brand shrink-0" />
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block">Data Protection</span>
-                  <span className="text-[10px] text-slate-500 block">TLS 1.3 & AES-256</span>
+                  <span className="text-[11px] font-bold text-emp-ink block">Data Protection</span>
+                  <span className="text-[10px] text-emp-ink-muted block">TLS 1.3 & AES-256</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-navy-950/50 border border-navy-800 flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
+              <div className="p-3 rounded-emp bg-emp-surface-tint border border-emp-surface-line flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-emp-brand shrink-0" />
                 <div>
-                  <span className="text-[11px] font-semibold text-slate-300 block">Payment Compliance</span>
-                  <span className="text-[10px] text-slate-500 block">PayPal Orders v2 Server-Verified</span>
+                  <span className="text-[11px] font-bold text-emp-ink block">Payment Compliance</span>
+                  <span className="text-[10px] text-emp-ink-muted block">PayPal Orders v2 Server-Verified</span>
                 </div>
               </div>
             </div>
@@ -740,21 +667,21 @@ export default function SettingsPage() {
         </div>
 
         {/* SECTION 5: ACCOUNT MANAGEMENT */}
-        <div className="p-6 rounded-2xl bg-navy-900 border border-navy-800 space-y-4">
-          <div className="flex items-center space-x-2 text-xs font-bold text-white pb-3 border-b border-navy-800">
-            <Shield className="w-4 h-4 text-electric-400" />
+        <div className="p-6 rounded-emp bg-white border border-emp-surface-line shadow-emp-sm space-y-4">
+          <div className="flex items-center space-x-2 text-sm font-bold text-emp-ink font-display pb-3 border-b border-emp-surface-line">
+            <Shield className="w-4 h-4 text-emp-brand" />
             <span>Account Management</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-navy-950/70 border border-navy-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-emp bg-emp-surface-tint border border-emp-surface-line">
             <div>
-              <span className="text-xs font-bold text-white block">
+              <span className="text-xs font-bold text-emp-ink block">
                 {profile.fullName || 'Registered User'}
               </span>
-              <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
+              <span className="text-[11px] text-emp-ink-secondary font-mono block mt-0.5">
                 {profile.email} {user?.id ? `• UID: ${user.id.slice(0, 8)}...` : ''}
               </span>
-              <span className="text-[10px] text-slate-500 block mt-1">
+              <span className="text-[10px] text-emp-ink-muted block mt-1">
                 Active Session • Verified Customer Profile
               </span>
             </div>
@@ -764,9 +691,9 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleExportData}
-                className="px-3.5 py-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-200 hover:text-white border border-navy-700 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                className="btn-emp btn-emp-secondary py-2 px-3 text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-electric-400" />
+                <Download className="w-3.5 h-3.5 text-emp-brand" />
                 <span>Export Ledger (JSON)</span>
               </button>
 
@@ -774,32 +701,10 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={logout}
-                className="px-3.5 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                className="px-3.5 py-2 rounded-pill bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold inline-flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out of CartPilot</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Delete Account (Disabled with Coming Soon note) */}
-          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
-            <div>
-              <span className="font-semibold text-slate-300 block">Close or Delete Account</span>
-              <span className="text-[11px] text-slate-500 block">
-                Permanently purge your digital passports, order ledger, and saved shipping preferences.
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                Coming Soon
-              </span>
-              <button
-                type="button"
-                disabled
-                className="px-3 py-1.5 rounded-lg bg-navy-950 border border-navy-800 text-slate-600 text-xs font-medium cursor-not-allowed"
-              >
-                Delete Account
+                <span>Sign Out</span>
               </button>
             </div>
           </div>

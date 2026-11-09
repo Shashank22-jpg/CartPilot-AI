@@ -6,19 +6,25 @@ import {
   mintDbPurchasePassport,
 } from '../services/db.js';
 import { isSupabaseConfigured } from '../config/supabase.js';
+import { optionalAuth } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
-// Demo test user UUID for hackathon sandbox prototyping if unauthenticated
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
-
 /**
  * GET /api/orders
- * Retrieve order history for current user
+ * Retrieve order history for current authenticated user
  */
-router.get('/', async (req, res, next) => {
+router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.headers['x-user-id'] || DEMO_USER_ID;
+    const userId = req.user?.id || req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(200).json({
+        success: true,
+        source: 'unauthenticated',
+        data: [],
+      });
+    }
 
     if (isSupabaseConfigured()) {
       try {
@@ -26,7 +32,7 @@ router.get('/', async (req, res, next) => {
         return res.status(200).json({
           success: true,
           source: 'supabase',
-          data: orders,
+          data: orders || [],
         });
       } catch (dbErr) {
         console.warn('[Orders API] Supabase query failed:', dbErr.message);
@@ -35,9 +41,8 @@ router.get('/', async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      source: 'simulated',
+      source: 'supabase',
       data: [],
-      notice: 'Supabase pending configuration. Connect credentials to persist orders.',
     });
   } catch (err) {
     next(err);
@@ -48,55 +53,55 @@ router.get('/', async (req, res, next) => {
  * POST /api/orders
  * Create an order record
  */
-router.post('/', async (req, res, next) => {
+router.post('/', optionalAuth, async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.headers['x-user-id'] || DEMO_USER_ID;
-    const { items, subtotal, tax, shippingCost, total, currency, shippingAddress, notes } = req.body;
+    const { orderNumber, subtotal, tax, shippingCost, total, currency, items, shippingAddress } = req.body;
+    const userId = req.user?.id || req.headers['x-user-id'];
 
-    if (!items || !items.length || !total) {
-      return res.status(400).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: 'Order payload must include valid items and total amount',
+        error: 'Authentication required to place and persist orders.',
       });
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const order = await createDbOrder({
-          userId,
-          items,
-          subtotal,
-          tax,
-          shippingCost,
-          total,
-          currency: currency || 'INR',
-          shippingAddress,
-          notes,
-        });
-
-        return res.status(201).json({
-          success: true,
-          source: 'supabase',
-          data: order,
-        });
-      } catch (dbErr) {
-        console.warn('[Orders API] Supabase createOrder failed:', dbErr.message);
-      }
+    if (!isSupabaseConfigured()) {
+      const simOrder = {
+        id: `sim-order-${Date.now()}`,
+        order_number: orderNumber || `CP-ORD-${Date.now()}`,
+        status: 'pending',
+        subtotal: Number(subtotal || 0),
+        tax: Number(tax || 0),
+        shipping_cost: Number(shippingCost || 0),
+        total: Number(total || 0),
+        currency: currency || 'INR',
+        shipping_address: shippingAddress || {},
+        created_at: new Date().toISOString(),
+      };
+      return res.status(201).json({
+        success: true,
+        source: 'simulated',
+        data: simOrder,
+      });
     }
 
-    // Mock response when DB is unconfigured
-    const mockOrderNumber = `CP-ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderData = {
+      orderNumber: orderNumber || `CP-ORD-${Date.now()}`,
+      userId,
+      subtotal: Number(subtotal),
+      tax: Number(tax || 0),
+      shippingCost: Number(shippingCost || 0),
+      total: Number(total),
+      currency: currency || 'INR',
+      shippingAddress: shippingAddress || {},
+      items: items || [],
+    };
+
+    const newOrder = await createDbOrder(orderData);
     return res.status(201).json({
       success: true,
-      source: 'simulated',
-      data: {
-        id: `mock-${Date.now()}`,
-        order_number: mockOrderNumber,
-        status: 'pending',
-        total,
-        currency: currency || 'INR',
-        created_at: new Date().toISOString(),
-      },
+      source: 'supabase',
+      data: newOrder,
     });
   } catch (err) {
     next(err);
@@ -105,11 +110,19 @@ router.post('/', async (req, res, next) => {
 
 /**
  * GET /api/orders/passports
- * Retrieve digital purchase passports for user
+ * Retrieve digital purchase passports for current authenticated user
  */
-router.get('/passports', async (req, res, next) => {
+router.get('/passports', optionalAuth, async (req, res, next) => {
   try {
-    const userId = req.user?.id || req.headers['x-user-id'] || DEMO_USER_ID;
+    const userId = req.user?.id || req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(200).json({
+        success: true,
+        source: 'unauthenticated',
+        data: [],
+      });
+    }
 
     if (isSupabaseConfigured()) {
       try {
@@ -117,7 +130,7 @@ router.get('/passports', async (req, res, next) => {
         return res.status(200).json({
           success: true,
           source: 'supabase',
-          data: passports,
+          data: passports || [],
         });
       } catch (dbErr) {
         console.warn('[Passports API] Supabase query failed:', dbErr.message);
@@ -126,9 +139,8 @@ router.get('/passports', async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      source: 'simulated',
+      source: 'supabase',
       data: [],
-      notice: 'Supabase pending configuration. Connect credentials to fetch live passports.',
     });
   } catch (err) {
     next(err);

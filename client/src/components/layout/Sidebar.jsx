@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   Bot,
@@ -10,12 +10,14 @@ import {
   PackageCheck,
   FileKey,
   Settings,
+  User,
   ChevronLeft,
   ChevronRight,
   LogOut,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function Sidebar() {
   const {
@@ -25,28 +27,25 @@ export default function Sidebar() {
     setMobileSidebarOpen,
     itemCount,
     compareList,
-    user,
+    userProfile,
     logout,
   } = useApp();
+  const { isDarkAiRoute } = useTheme();
 
   const displayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    (user?.email ? user.email.split('@')[0] : 'Alex Mercer');
+    userProfile?.full_name || 'Shashank AR';
 
-  const displaySubtitle = user?.email || 'Verified Buyer Session';
+  const displaySubtitle = 'Authenticated Session';
 
   const userInitials = (
-    user?.user_metadata?.full_name ||
-    user?.email ||
-    'AM'
+    userProfile?.full_name || 'SA'
   )
     .replace(/[^a-zA-Z]/g, '')
     .slice(0, 2)
-    .toUpperCase() || 'AM';
+    .toUpperCase() || 'SA';
 
   const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Storefront', icon: LayoutDashboard },
     { to: '/assistant', label: 'AI Assistant', icon: Bot, badge: 'Agent' },
     { to: '/discover', label: 'Discover', icon: Compass },
     {
@@ -64,6 +63,7 @@ export default function Sidebar() {
     },
     { to: '/orders', label: 'Order History', icon: PackageCheck },
     { to: '/passport', label: 'Purchase Passport', icon: FileKey },
+    { to: '/profile', label: 'My Profile', icon: User },
     { to: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -85,41 +85,66 @@ export default function Sidebar() {
 
       {/* Main Sidebar Element */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 bg-navy-900 border-r border-navy-800 transition-all duration-300 ease-in-out flex flex-col justify-between select-none ${
-          // Mobile: drawer sliding in from left
+        className={`fixed top-0 left-0 bottom-0 z-50 transition-all duration-300 ease-in-out flex flex-col justify-between select-none ${
+          isDarkAiRoute
+            ? 'bg-navy-900 border-r border-navy-800 text-slate-100'
+            : 'bg-white border-r border-emp-surface-line text-emp-ink shadow-emp-sm'
+        } ${
           mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
         } ${
-          // Desktop: responsive collapsed or expanded width
           sidebarCollapsed ? 'md:w-20' : 'md:w-64'
         }`}
       >
         {/* Top Branding Section */}
         <div>
-          <div className="h-16 px-4 flex items-center justify-between border-b border-navy-800">
-            <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-tr from-electric-500 via-violet-600 to-electric-400 p-0.5 shadow-glow-blue flex items-center justify-center">
-                <div className="w-full h-full bg-navy-950 rounded-[10px] flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-electric-400" />
-                </div>
+          <div className={`h-16 px-4 flex items-center justify-between border-b ${
+            isDarkAiRoute ? 'border-navy-800' : 'border-emp-surface-line'
+          }`}>
+            <Link to="/dashboard" className="flex items-center space-x-3 overflow-hidden">
+              <div className={`relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-transform hover:scale-105 ${
+                isDarkAiRoute
+                  ? 'bg-gradient-to-tr from-electric-500 via-violet-600 to-electric-400 p-0.5 shadow-glow-blue'
+                  : 'bg-emp-brand text-white shadow-[0_6px_14px_rgba(12,107,88,0.25)]'
+              }`}>
+                {isDarkAiRoute ? (
+                  <div className="w-full h-full bg-navy-950 rounded-[10px] flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-electric-400" />
+                  </div>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
+                    <path d="M4 8h18l-1.6 9.2a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6L4 8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                    <path d="M9 8V6.5a4 4 0 0 1 8 0V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                )}
               </div>
 
               {(!sidebarCollapsed || mobileSidebarOpen) && (
                 <div className="min-w-0 flex flex-col">
-                  <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-electric-300 bg-clip-text text-transparent truncate">
-                    CartPilot<span className="text-electric-400">.AI</span>
+                  <span className={`text-base font-extrabold tracking-tight truncate ${
+                    isDarkAiRoute
+                      ? 'bg-gradient-to-r from-white via-slate-100 to-electric-300 bg-clip-text text-transparent'
+                      : 'text-emp-ink font-display'
+                  }`}>
+                    CartPilot<span className={isDarkAiRoute ? 'text-electric-400' : 'text-emp-brand'}>.AI</span>
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase truncate">
+                  <span className={`text-[10px] font-semibold tracking-wider uppercase truncate ${
+                    isDarkAiRoute ? 'text-slate-400' : 'text-emp-ink-muted'
+                  }`}>
                     Agentic Commerce
                   </span>
                 </div>
               )}
-            </div>
+            </Link>
 
             {/* Desktop Collapse / Expand Toggle */}
             <button
               onClick={toggleSidebar}
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
+              className={`hidden md:flex p-1.5 rounded-lg transition-colors ${
+                isDarkAiRoute
+                  ? 'text-slate-400 hover:text-white hover:bg-navy-800'
+                  : 'text-emp-ink-muted hover:text-emp-brand hover:bg-emp-surface-tint'
+              }`}
             >
               {sidebarCollapsed ? (
                 <ChevronRight className="w-4 h-4" />
@@ -131,14 +156,14 @@ export default function Sidebar() {
             {/* Mobile Close Button */}
             <button
               onClick={() => setMobileSidebarOpen(false)}
-              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800"
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Navigation Link List */}
-          <nav className="p-3 space-y-1.5 mt-2">
+          <nav className="p-3 space-y-1 mt-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -147,46 +172,60 @@ export default function Sidebar() {
                   to={item.to}
                   onClick={handleNavClick}
                   className={({ isActive }) =>
-                    `flex items-center rounded-xl transition-all duration-200 group relative ${
+                    `flex items-center rounded-emp-sm transition-all duration-200 group relative ${
                       sidebarCollapsed && !mobileSidebarOpen
                         ? 'justify-center p-3'
                         : 'px-3.5 py-2.5 space-x-3'
                     } ${
                       isActive
-                        ? 'bg-gradient-to-r from-electric-600/20 to-violet-600/20 text-white font-medium border border-electric-500/30 shadow-sm shadow-electric-500/10'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-navy-800/60 border border-transparent'
+                        ? isDarkAiRoute
+                          ? 'bg-gradient-to-r from-electric-600/20 to-violet-600/20 text-white font-medium border border-electric-500/30'
+                          : 'bg-emp-brand-050 text-emp-brand-700 font-bold border border-emp-brand-100'
+                        : isDarkAiRoute
+                        ? 'text-slate-400 hover:text-slate-200 hover:bg-navy-800/60'
+                        : 'text-emp-ink-secondary hover:text-emp-brand hover:bg-emp-surface-tint'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <Icon
-                        className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                          isActive ? 'text-electric-400' : 'text-slate-400'
+                        className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                          isActive
+                            ? isDarkAiRoute
+                              ? 'text-electric-400'
+                              : 'text-emp-brand'
+                            : isDarkAiRoute
+                            ? 'text-slate-400'
+                            : 'text-emp-ink-muted group-hover:text-emp-brand'
                         }`}
                       />
 
                       {(!sidebarCollapsed || mobileSidebarOpen) && (
-                        <span className="text-xs tracking-wide flex-1 truncate">
+                        <span className="text-xs tracking-wide flex-1 truncate font-body">
                           {item.label}
                         </span>
                       )}
 
                       {(!sidebarCollapsed || mobileSidebarOpen) && item.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-violet-500/20 border border-violet-500/40 text-violet-300 uppercase tracking-wider">
+                        <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded-pill uppercase tracking-wider ${
+                          isDarkAiRoute
+                            ? 'bg-violet-500/20 border border-violet-500/40 text-violet-300'
+                            : 'bg-emp-brand-050 border border-emp-brand-100 text-emp-brand'
+                        }`}>
                           {item.badge}
                         </span>
                       )}
 
                       {(!sidebarCollapsed || mobileSidebarOpen) && item.badgeCount !== null && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-electric-500 text-white shadow-sm shadow-electric-500/50">
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-pill bg-emp-accent text-white">
                           {item.badgeCount}
                         </span>
                       )}
 
                       {/* Popover tooltip when collapsed on desktop */}
                       {sidebarCollapsed && !mobileSidebarOpen && (
-                        <div className="hidden md:block absolute left-full ml-3 px-2.5 py-1 bg-navy-800 border border-navy-700 text-white text-xs rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                        <div className="hidden md:block absolute left-full ml-3 px-2.5 py-1 bg-white border border-emp-surface-line text-emp-ink text-xs rounded-emp-sm shadow-emp-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
                           {item.label}
                           {item.badgeCount && ` (${item.badgeCount})`}
                         </div>
@@ -200,43 +239,47 @@ export default function Sidebar() {
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="p-3 border-t border-navy-800 bg-navy-950/40">
+        <div className={`p-3 border-t ${
+          isDarkAiRoute ? 'border-navy-800 bg-navy-950/40' : 'border-emp-surface-line bg-emp-surface-tint/50'
+        }`}>
           {!sidebarCollapsed || mobileSidebarOpen ? (
-            <div className="flex items-center justify-between p-2 rounded-xl bg-navy-850/60 border border-navy-750/70 hover:border-navy-700 transition-colors">
-              <div className="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 flex-shrink-0 shadow-sm shadow-electric-500/20">
-                  <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
-                    {userInitials}
-                  </div>
+            <div className={`flex items-center justify-between p-2 rounded-xl border transition-colors ${
+              isDarkAiRoute
+                ? 'bg-navy-850/60 border-navy-750/70 hover:border-navy-700'
+                : 'bg-white border-emp-surface-line hover:border-emp-brand-100'
+            }`}>
+              <Link
+                to="/profile"
+                onClick={handleNavClick}
+                className="flex items-center space-x-2.5 min-w-0 flex-1 pr-2 hover:opacity-90 transition-opacity"
+              >
+                <div className="w-8 h-8 rounded-full bg-emp-brand text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                  {userInitials}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-slate-200 truncate">{displayName}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{displaySubtitle}</p>
+                  <p className="text-xs font-semibold truncate">{displayName}</p>
+                  <p className="text-[10px] text-emp-ink-muted truncate">{displaySubtitle}</p>
                 </div>
-              </div>
+              </Link>
 
               {/* Logout Button */}
               <button
                 type="button"
                 onClick={logout}
                 title="Sign out of CartPilot"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-800 transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-emp-surface-tint transition-colors flex-shrink-0"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           ) : (
             <div className="flex flex-col items-center py-1 space-y-2">
-              <button
-                type="button"
-                onClick={logout}
-                title={`${displayName} • Click to Sign Out`}
-                className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 shadow-sm shadow-electric-500/20 hover:scale-105 transition-transform group relative"
+              <Link
+                to="/profile"
+                className="w-8 h-8 rounded-full bg-emp-brand text-white flex items-center justify-center text-xs font-bold"
               >
-                <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
-                  {userInitials}
-                </div>
-              </button>
+                {userInitials}
+              </Link>
             </div>
           )}
         </div>

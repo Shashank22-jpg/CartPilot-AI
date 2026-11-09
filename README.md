@@ -3,7 +3,46 @@
 > **Intelligent Agentic Commerce Platform**  
 > Built for the **PayPal AI Hackathon 2026**
 
-CartPilot AI is an intelligent agentic commerce platform that helps users research, evaluate, purchase, and manage products through an AI-powered shopping agent. Going far beyond conventional chatbots, CartPilot AI analyzes user intent, compares specifications, conducts evidence-based risk assessment, curates shopping carts, facilitates customer-authorized PayPal sandbox checkout with strict server-side verification, and provides post-purchase assistance with Digital Purchase Passports.
+CartPilot AI is an intelligent agentic commerce platform that helps consumers discover, evaluate, compare, purchase, and manage physical goods through an autonomous AI shopping agent. Going far beyond conventional chatbots, CartPilot AI combines **Google Gemini 2.5 Pro autonomous tool-calling**, **Supabase PostgreSQL** data attestation, **PayPal Orders v2 Sandbox** checkout with strict server-side cryptographic capture verification, and post-purchase lifecycle management via tokenized **Digital Purchase Passports**.
+
+---
+
+## 🌟 Key Features
+
+### 1. Hybrid Design Architecture
+- **Consumer Retail Experience (Light Theme)**: Clean, warm off-white background (`#fcfbf9`), emerald brand accents (`#0f766e`), forest green typography, and generous whitespace inspired by modern luxury retail. Applied to Storefront, Product Discovery, PDP Modal, Shopping Cart, Checkout, Order History, and Settings.
+- **AI & Intelligence Workspaces (Dark Navy Theme)**: Immersive command center (`#060A13` / `#0A101D`) with subtle cyan & electric blue accents. Applied to the **AI Shopping Assistant** and **Purchase Intelligence Dossier**.
+
+### 2. Autonomous AI Shopping Assistant
+- Powered by **Google Gemini 2.5 Pro** with multi-turn conversation and function/tool-calling.
+- Autonomous capabilities:
+  - `search_products`: Real-time semantic and multi-attribute catalogue filtering.
+  - `get_product_details`: Retrieves deep technical specifications, warranty terms, and return rights.
+  - `compare_products`: Side-by-side trade-off analysis across 2 to 4 products.
+  - `add_to_cart`: Stages items directly into the user's shopping cart.
+- Embeds natural product recommendation cards within message streams with one-click Add to Cart and Compare actions.
+
+### 3. Unified Product Catalogue & Discovery
+- Built on the authoritative open-source **Aptdot CC0 Benchmark Catalogue** (48 active products, 135 SKU variant configurations).
+- Category filtering, price ceiling range slider, real-time availability badges, and pure USD (`$`) accounting.
+- Interactive **Product Details Modal (PDP)** with image zoom, variant matrix (size/color/case), stock counters, and tabbed specifications.
+
+### 4. Smart Comparison & Purchase Intelligence
+- **Product Comparison (`/compare`)**: Side-by-side technical specification matrix highlighting verified differences in price, stock, ratings, dimensions, materials, and warranty.
+- **Purchase Intelligence (`/intelligence`)**: Analytical decision dashboard featuring:
+  - Executive summary: *"What to know before buying"*.
+  - Category-based product selector.
+  - Audited specifications vs. explicit gap analysis of unrecorded benchmarks.
+  - Seller provenance, warranty safeguards, and value index.
+
+### 5. Secure Shopping Cart & PayPal Sandbox Checkout
+- Multi-item cart management with quantity controls, subtotal calculations, and monthly budget ceiling guardrails.
+- Client-side integration of official `@paypal/react-paypal-js` SDK.
+- **Strict Server-Side Capture Verification**: Frontend authorizations are cryptographically routed to `/api/paypal/capture-order` for upstream REST verification against `api-m.sandbox.paypal.com`.
+
+### 6. Order History & Digital Purchase Passports
+- Complete user order history backed by Supabase with live status filters (`COMPLETED`, `PENDING`, `CANCELLED`).
+- Interactive **Digital Purchase Passports (`/passport`)**: Cryptographic proof-of-purchase token with serial numbers, dynamic warranty countdowns, return window trackers, and one-click printable certificate exports.
 
 ---
 
@@ -11,16 +50,16 @@ CartPilot AI is an intelligent agentic commerce platform that helps users resear
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Frontend** | React 18, Vite, JavaScript, Tailwind CSS, Lucide React, `@paypal/react-paypal-js` |
-| **Backend** | Node.js, Express.js, CORS, Morgan, Dotenv |
-| **Database** | Supabase PostgreSQL (`@supabase/supabase-js`) |
-| **AI Engine** | Google Gemini API (`@google/generative-ai`) with tool/function calling |
+| **Frontend** | React 18, Vite, Tailwind CSS, Lucide React, Motion (`motion/react`), `@paypal/react-paypal-js`, Canvas Confetti |
+| **Backend** | Node.js (v24 LTS / v18+), Express.js, CORS, Morgan, Dotenv |
+| **Database & Auth** | Supabase PostgreSQL (`@supabase/supabase-js`), Row Level Security (RLS) |
+| **AI Intelligence** | Google Gemini 2.5 Pro (`@google/generative-ai`) with autonomous tool calling |
 | **Payments** | PayPal Orders v2 REST API (Sandbox Environment) |
-| **Deployment** | Vercel (Frontend), Render (Backend) |
+| **Testing & Quality** | Custom AST Hook Analyzers, PayPal Sandbox Integration Tests, Quality Audits |
 
 ---
 
-## 📁 Project Architecture & Structure
+## 📁 Repository Structure
 
 ```text
 CartpilotAI/
@@ -28,44 +67,37 @@ CartpilotAI/
 ├── .env.example                  # Root environment reference guide
 ├── package.json                  # Root scripts for concurrently running client & server
 ├── README.md                     # Project documentation & setup instructions
+├── seed.sql                      # Supabase database schema & seed scripts
 │
 ├── client/                       # React 18 + Vite + Tailwind CSS Frontend
 │   ├── .env.example              # Frontend environment variables template
 │   ├── index.html                # Vite HTML entry
-│   ├── package.json              # Client dependencies & scripts (React Router, Lucide, Tailwind)
-│   ├── postcss.config.js         # PostCSS configuration
-│   ├── tailwind.config.js        # Dark navy palette, electric blue, violet accents & glow effects
+│   ├── package.json              # Client dependencies & scripts
+│   ├── tailwind.config.js        # Hybrid design tokens (Emporium Light + Dark Navy)
 │   ├── vite.config.js            # Vite configuration with API reverse proxy
-│   ├── public/
-│   │   └── favicon.svg           # CartPilot SVG icon
 │   └── src/
-│       ├── main.jsx              # Application bootstrap
 │       ├── App.jsx               # Routes setup & AppProvider wrapper
-│       ├── index.css             # Tailwind directives, custom scrollbars & glass styling
 │       ├── components/
-│       │   ├── layout/
-│       │   │   ├── AppLayout.jsx # Persistent shell with collapsible sidebar & top search header
-│       │   │   ├── Header.jsx    # Quick search, notifications, live API health & quick cart
-│       │   │   └── Sidebar.jsx   # Fixed collapsible navigation with active indicators & badges
-│       │   └── common/           # Shared UI badges and status components
+│       │   ├── checkout/         # PayPal Smart Buttons & Checkout Modal
+│       │   ├── layout/           # AppLayout, Header, and Sidebar
+│       │   └── product/          # ProductDetailModal & specification matrix
 │       ├── context/
-│       │   └── AppContext.jsx    # Global cart, compare, intelligence, orders, and health state
-│       ├── data/
-│       │   ├── mockProducts.js   # Realistic evidence-verified sample hardware catalogue
-│       │   └── mockOrders.js     # Realistic PayPal Sandbox orders & Digital Passports
+│       │   ├── AppContext.jsx    # Global cart, compare, intelligence, orders, and auth state
+│       │   └── ThemeContext.jsx  # Hybrid route-aware theme controller
 │       ├── pages/
-│       │   ├── DashboardPage.jsx # /dashboard - Welcome, stats, AI entrypoint & recent activity
-│       │   ├── AssistantPage.jsx # /assistant - Multi-turn conversational AI workspace
-│       │   ├── DiscoverPage.jsx  # /discover - Product catalogue, filters & spec drawer
-│       │   ├── ComparePage.jsx   # /compare - Side-by-side spec, warranty & return matrix
-│       │   ├── IntelligencePage.jsx # /intelligence - Evidence sources, risk score & seller integrity
-│       │   ├── CartPage.jsx      # /cart - Shopping cart, budget cap guardrail & sandbox checkout
-│       │   ├── OrdersPage.jsx    # /orders - Verified transaction history & carrier tracking
-│       │   ├── PassportPage.jsx  # /passport - Digital Purchase Passports & warranty claims
-│       │   └── SettingsPage.jsx  # /settings - Profile, budget ceiling & system diagnostics
-│       └── services/
-│           └── api.js            # Central API client for Express backend health checks
-│       └── utils/                # Utility helpers
+│       │   ├── DashboardPage.jsx # Storefront homepage with hero & featured grid
+│       │   ├── DiscoverPage.jsx  # Catalogue discovery, filters, and PDP
+│       │   ├── AssistantPage.jsx # Full-height conversational AI shopping companion
+│       │   ├── ComparePage.jsx   # Side-by-side product difference comparison
+│       │   ├── IntelligencePage.jsx # Analytical product decision dashboard
+│       │   ├── CartPage.jsx      # Shopping cart & budget ceiling guardrail
+│       │   ├── OrdersPage.jsx    # Order history & transaction ledger
+│       │   ├── PassportPage.jsx  # Digital Purchase Passports & warranty management
+│       │   ├── LoginPage.jsx     # Supabase authentication login
+│       │   ├── RegisterPage.jsx  # Supabase registration & preferences setup
+│       │   └── SettingsPage.jsx  # Budget limits, criteria, & notifications
+│       └── utils/
+│           └── currency.js       # Pure USD ($) currency formatting
 │
 └── server/                       # Node.js + Express.js API Backend
     ├── .env.example              # Backend environment variables template
@@ -74,39 +106,34 @@ CartpilotAI/
         ├── index.js              # Server entry point & graceful shutdown
         ├── app.js                # Express app setup, CORS, JSON parser, route aggregation
         ├── config/
-        │   ├── env.js            # Environment loader & configuration validator
         │   ├── gemini.js         # Google Gemini AI client configuration
         │   ├── paypal.js         # PayPal OAuth2 client credentials & sandbox manager
         │   └── supabase.js       # Supabase PostgreSQL client initializer
         ├── controllers/
-        │   └── healthController.js # Health-check diagnostic controller
-        ├── middlewares/
-        │   ├── errorHandler.js   # Centralized error handler & 404 router
-        │   └── requestLogger.js  # HTTP request logger (Morgan)
-        ├── routes/
-        │   ├── index.js          # Main API aggregator router (`/api`)
-        │   ├── healthRoutes.js   # Health check route (`/api/health`)
-        │   ├── aiRoutes.js       # Gemini agent route placeholders (`/api/ai`)
-        │   ├── productRoutes.js  # Product catalogue placeholders (`/api/products`)
-        │   ├── orderRoutes.js    # Order & passport placeholders (`/api/orders`)
-        │   └── paypalRoutes.js   # Server-side PayPal order & verification (`/api/paypal`)
-        ├── services/             # Core business logic services
-        └── utils/
-            └── response.js       # Standardized JSON response formatters
+        │   ├── aiController.js   # Gemini agent multi-turn conversation handler
+        │   └── paypalController.js # Server-side PayPal order creation & capture
+        ├── routes/               # API route aggregators
+        ├── scripts/              # Automated test suites & PayPal verification scripts
+        └── services/
+            ├── aiAgent.js        # Gemini autonomous tool declarations & execution
+            ├── db.js             # Supabase database access layer
+            └── paypalService.js  # Upstream PayPal REST API v2 client
 ```
 
 ---
 
-## 🔒 Security & Development Rules
+## 🔒 Security & Safe Commerce Guardrails
 
 1. **Strict Server-Side Payment Verification**:
    - The frontend never confirms payments autonomously.
-   - All captures are posted to `/api/paypal/capture-order` where the Express backend verifies the transaction against the PayPal REST API before updating database state.
+   - All captures are posted to `/api/paypal/capture-order` where the Express backend verifies the transaction with PayPal's sandbox servers before recording order state or minting digital passports.
 2. **Zero Secret Exposure**:
-   - Private API keys, PayPal client secrets, and service-role keys reside strictly on the server.
+   - Private API keys, PayPal client secrets, and service-role keys reside strictly on the backend server.
    - All `.env*` files are strictly excluded via `.gitignore`.
-3. **Evidence-Based Information**:
-   - The platform strictly differentiates between verified manufacturer specifications, seller claims, and unverified data.
+3. **Demonstration & Synthetic Data Disclosures**:
+   - **Catalogue Data**: All products, SKU identifiers, specifications, and merchant records belong to the open-source **Aptdot CC0-1.0 Universal** benchmark dataset.
+   - **Sandbox Payments**: All checkout flows operate strictly in **PayPal Sandbox mode** using simulated test balances. Real financial capture and physical delivery are intentionally prohibited.
+   - **Honest Absence**: Unverified product attributes are explicitly labeled *"Not available in the catalogue"* rather than fabricated.
 
 ---
 
@@ -142,7 +169,7 @@ PORT=5000
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 
-# PayPal Sandbox Credentials
+# PayPal Sandbox Credentials (REST API v2)
 PAYPAL_MODE=sandbox
 PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
 PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret_here
@@ -154,28 +181,25 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # Google Gemini API
 GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-pro
 ```
 
 #### Frontend (`client/.env`):
 ```bash
-# Empty in development to use Vite proxy
+# Empty in local development to use Vite proxy
 VITE_API_BASE_URL=
 VITE_PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
 
-# Supabase Credentials (Safe for browser client)
+# Supabase Credentials (Safe for browser client with RLS)
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
-### 3. Supabase Database Migration & Seeding
+### 3. Database Migration & Seeding
 
-1. Open your **[Supabase Dashboard](https://supabase.com/dashboard)** and select your project.
-2. Navigate to the **SQL Editor** tab from the left sidebar.
-3. Click **New query** and paste the entire contents of [`server/supabase/schema.sql`](file:///d:/CartpilotAI/server/supabase/schema.sql).
-4. Click **Run** (or `Ctrl+Enter`). This creates all 10 core tables, enums, indexes, triggers, and Row Level Security policies.
-5. Create another new query and paste the contents of [`server/supabase/seed.sql`](file:///d:/CartpilotAI/server/supabase/seed.sql).
-6. Click **Run** to seed 12 realistic electronics products with specifications and policy terms.
-7. Verify in **Table Editor** that `products` contains 12 rows.
+1. Open your **[Supabase Dashboard](https://supabase.com/dashboard)**.
+2. In the **SQL Editor**, run the contents of [`seed.sql`](file:///d:/CartpilotAI/seed.sql) (or `server/supabase/schema.sql` and `server/supabase/seed.sql`).
+3. This creates all core tables (`products`, `orders`, `order_items`, `passports`, `warranties`, `profiles`), RLS policies, and populates the 48 active Aptdot benchmark products.
 
 ### 4. Running in Development Mode
 
@@ -185,62 +209,40 @@ Run both client and server concurrently from the root directory:
 npm run dev
 ```
 
-Or run them individually in separate terminal sessions:
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
+- **Backend Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+
+---
+
+## 🧪 Automated Testing & Verification
+
+CartPilot AI includes comprehensive automated audit and test suites:
 
 ```bash
-# Backend (runs on http://localhost:5000)
-npm run dev:server
+# Run comprehensive quality & functionality audit (41 automated tests)
+node scratch/final_quality_audit.js
 
-# Frontend (runs on http://localhost:5173)
-npm run dev:client
+# Run PayPal Sandbox integration & error handling suite (7 automated tests)
+node server/src/scripts/test_paypal_repair.js
+
+# Run React AST hook analyzer (validates Rules of Hooks across 42 components)
+node scratch/ast_check_hooks.js
+
+# Run frontend production build
+npm run build --prefix client
 ```
 
 ---
 
-## 🩺 Health Check & Diagnostics
+## ⚠️ Known Limitations
 
-Once running, verify connectivity:
-
-- **Backend Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
-  ```json
-  {
-    "status": "ok",
-    "service": "CartPilot AI API",
-    "version": "1.0.0",
-    "environment": "development",
-    "uptimeSeconds": 12.4,
-    "timestamp": "2026-11-04T18:50:00.000Z",
-    "integrations": {
-      "paypal": false,
-      "supabase": true,
-      "gemini": true
-    },
-    "database": {
-      "connected": true,
-      "status": "operational",
-      "productsCount": 12
-    }
-  }
-  ```
-- **Database Diagnostic Check**: [http://localhost:5000/api/health/db](http://localhost:5000/api/health/db)
-- **Frontend Dashboard**: [http://localhost:5173](http://localhost:5173) displays real-time connection status, roundtrip latency, and diagnostic information in `/settings`.
+1. **Sandbox Environment**: All payment authorization is tied to PayPal Sandbox accounts. Real payment methods (e.g. live credit cards) are rejected by design.
+2. **Synthetic Catalogue**: Product inventories, dimensions, and merchant entities are benchmark fixtures for evaluating agentic commerce; physical delivery does not occur.
+3. **Browser Storage**: Guest carts and unauthenticated states persist locally in browser storage until the user authenticates with Supabase.
 
 ---
 
-## 📋 Hackathon Roadmap (14 Core Requirements)
+## 📄 License
 
-- [x] **Project Initialization**: Modular monorepo setup, Vite + React, Tailwind CSS, Express backend, health check API.
-- [x] **Database Schema & RLS**: Complete Supabase PostgreSQL migration (10 tables, UUID PKs, Row Level Security, multi-currency).
-- [x] **Product Catalogue Seed**: 12 realistic hardware items with structured evidence, return policies, and specifications.
-- [ ] **Auth & User Profiles**: Supabase Authentication with profile preferences and budgets.
-- [ ] **Natural-Language Discovery**: Gemini-powered conversational query analysis.
-- [ ] **Specification Comparison**: Side-by-side evidence matrix and tradeoff analysis.
-- [ ] **Budget-Aware Recommendations**: Smart bundle optimization within designated spending caps.
-- [ ] **Risk Assessment**: Differentiating verified facts vs seller claims vs unavailable data.
-- [ ] **Shopping Cart & Checkout**: Cart staging with line items and currency conversions.
-- [ ] **PayPal Sandbox Integration**: Client-side PayPal Smart Buttons.
-- [ ] **Server-Side Payment Verification**: Strict capture verification against PayPal Orders v2 API.
-- [ ] **Order History & Ledger**: Supabase database recording with verification receipts.
-- [ ] **Digital Purchase Passport**: Interactive digital passport proving authentic purchase.
-- [ ] **Warranty & Return Management**: Automated return windows and warranty tracking.
-- [ ] **Post-Purchase AI Assistant**: Post-sale troubleshooting and claim facilitation.
+This project is licensed under the open-source license chosen by the repository maintainer. See `LICENSE` for details.

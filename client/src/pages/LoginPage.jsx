@@ -10,13 +10,26 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
-  Phone,
   KeyRound,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { signInWithEmailOrPhone, resetPasswordForEmail } from '../services/supabase';
+import {
+  motion,
+  AnimatePresence,
+  PageTransition,
+  AnimatedButton,
+  loginCard,
+  loginHeading,
+  loginStaggerContainer,
+  staggerFieldItem,
+  springButtonEntrance,
+  fadeUp,
+  scaleIn,
+  springs,
+} from '../animations';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -106,13 +119,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoFill = () => {
-    setIdentifier('demo@cartpilot.ai');
-    setPassword('DemoUserCartPilot2026!');
-    setErrors({});
-    setAuthError(null);
-  };
-
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     setResetError(null);
@@ -144,16 +150,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden select-none">
+    <PageTransition className="min-h-screen bg-navy-950 flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden select-none">
       {/* Background ambient lighting */}
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-electric-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-electric-500/5 rounded-full blur-[140px] pointer-events-none" />
 
       {/* Main Glassmorphic Card Container */}
-      <div className="relative z-10 w-full max-w-md bg-navy-900/80 border border-navy-750/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/60 space-y-6">
+      <motion.div
+        variants={loginCard}
+        initial="initial"
+        animate="animate"
+        className="relative z-10 w-full max-w-md bg-navy-900/80 border border-navy-750/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/60 space-y-6"
+      >
         {/* Brand Header */}
-        <div className="text-center space-y-2">
+        <motion.div
+          variants={loginHeading}
+          className="text-center space-y-2"
+        >
           <div className="inline-flex p-0.5 rounded-2xl bg-gradient-to-tr from-electric-500 via-violet-600 to-electric-400 shadow-glow-blue mb-2">
             <div className="w-12 h-12 rounded-[14px] bg-navy-950 flex items-center justify-center">
               <Bot className="w-6 h-6 text-electric-400" />
@@ -166,23 +180,40 @@ export default function LoginPage() {
           <p className="text-xs text-slate-400">
             Access your AI Shopping Agent, hardware passports & orders
           </p>
-        </div>
+        </motion.div>
 
         {/* Global Auth Error Alert */}
-        {authError && (
-          <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-300 flex items-start space-x-2.5 animate-in fade-in duration-200">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Authentication Notice</p>
-              <p className="text-[11px] text-rose-200/90 mt-0.5 leading-relaxed">{authError}</p>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {authError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-xs text-rose-300 flex items-start space-x-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold">Authentication Notice</p>
+                  <p className="text-[11px] text-rose-200/90 mt-0.5 leading-relaxed">{authError}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        {/* Login Form with Staggered Field Entrance */}
+        <motion.form
+          variants={loginStaggerContainer}
+          initial="initial"
+          animate="animate"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          noValidate
+        >
           {/* Email or Phone Field */}
-          <div className="space-y-1.5">
+          <motion.div variants={staggerFieldItem} className="space-y-1.5">
             <label
               htmlFor="login-identifier"
               className="block text-xs font-semibold text-slate-300"
@@ -204,20 +235,30 @@ export default function LoginPage() {
                 }}
                 placeholder="name@domain.com"
                 disabled={isSubmitting}
-                className={`w-full bg-navy-950/90 border rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors ${
+                className={`w-full bg-navy-950/90 border rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all duration-200 ${
                   errors.identifier
-                    ? 'border-rose-500/70 focus:border-rose-400'
-                    : 'border-navy-750 focus:border-electric-500'
+                    ? 'border-rose-500/70 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/30'
+                    : 'border-navy-750 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20'
                 }`}
               />
             </div>
-            {errors.identifier && (
-              <p className="text-[11px] text-rose-400 font-medium pl-1">{errors.identifier}</p>
-            )}
-          </div>
+            <AnimatePresence>
+              {errors.identifier && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -4, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="text-[11px] text-rose-400 font-medium pl-1 overflow-hidden"
+                >
+                  {errors.identifier}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
           {/* Password Field */}
-          <div className="space-y-1.5">
+          <motion.div variants={staggerFieldItem} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="login-password"
@@ -251,10 +292,10 @@ export default function LoginPage() {
                 }}
                 placeholder="Enter your account password"
                 disabled={isSubmitting}
-                className={`w-full bg-navy-950/90 border rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors ${
+                className={`w-full bg-navy-950/90 border rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all duration-200 ${
                   errors.password
-                    ? 'border-rose-500/70 focus:border-rose-400'
-                    : 'border-navy-750 focus:border-electric-500'
+                    ? 'border-rose-500/70 focus:border-rose-400 focus:ring-1 focus:ring-rose-400/30'
+                    : 'border-navy-750 focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20'
                 }`}
               />
               <button
@@ -263,48 +304,73 @@ export default function LoginPage() {
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white rounded-lg focus:outline-none transition-colors"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <AnimatePresence mode="wait" initial={false}>
+                  {showPassword ? (
+                    <motion.span
+                      key="eye-off"
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.7 }}
+                      transition={{ duration: 0.15 }}
+                      className="block"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="eye"
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.7 }}
+                      transition={{ duration: 0.15 }}
+                      className="block"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
-            {errors.password && (
-              <p className="text-[11px] text-rose-400 font-medium pl-1">{errors.password}</p>
-            )}
-          </div>
+            <AnimatePresence>
+              {errors.password && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -4, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="text-[11px] text-rose-400 font-medium pl-1 overflow-hidden"
+                >
+                  {errors.password}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
           {/* Remember Me Checkbox */}
-          <div className="flex items-center justify-between pt-1">
-            <label className="flex items-center space-x-2 cursor-pointer">
+          <motion.div variants={staggerFieldItem} className="flex items-center justify-between pt-1">
+            <label className="flex items-center space-x-2 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-navy-700 bg-navy-950 text-electric-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                className="w-4 h-4 rounded border-navy-700 bg-navy-950 text-electric-500 focus:ring-0 focus:ring-offset-0 cursor-pointer transition-transform group-hover:scale-105"
               />
-              <span className="text-xs text-slate-300 font-medium">Remember my session</span>
+              <span className="text-xs text-slate-300 font-medium group-hover:text-white transition-colors">
+                Remember my session
+              </span>
             </label>
-
-            {/* Quick Demo Fill Shortcut */}
-            <button
-              type="button"
-              onClick={handleQuickDemoFill}
-              className="text-[10px] font-mono text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 px-2 py-0.5 rounded-full transition-colors flex items-center space-x-1"
-              title="Autofill verified demo test credentials"
-            >
-              <Sparkles className="w-2.5 h-2.5" />
-              <span>Fill Demo Credentials</span>
-            </button>
-          </div>
+          </motion.div>
 
           {/* Sign In Submit Button */}
-          <div className="pt-2">
-            <button
+          <motion.div variants={springButtonEntrance} className="pt-2">
+            <AnimatedButton
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-electric-600 via-electric-500 to-violet-600 hover:from-electric-500 hover:to-violet-500 text-white text-xs font-bold shadow-glow-blue flex items-center justify-center space-x-2 transition-all transform active:scale-95 disabled:opacity-60 disabled:pointer-events-none"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-electric-600 via-electric-500 to-violet-600 hover:from-electric-500 hover:to-violet-500 text-white text-xs font-bold shadow-glow-blue flex items-center justify-center space-x-2 transition-all disabled:opacity-60 disabled:pointer-events-none"
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                   <span>Signing In to Supabase...</span>
                 </>
               ) : (
@@ -313,9 +379,9 @@ export default function LoginPage() {
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </button>
-          </div>
-        </form>
+            </AnimatedButton>
+          </motion.div>
+        </motion.form>
 
         {/* Footer Link to Register */}
         <div className="pt-2 border-t border-navy-800 text-center">
@@ -329,90 +395,122 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Forgot Password Modal */}
-      {forgotModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-navy-900 border border-navy-750 rounded-2xl p-6 space-y-4 shadow-2xl relative">
-            <button
-              onClick={() => {
-                setForgotModalOpen(false);
-                setResetError(null);
-                setResetSuccessMessage(null);
-              }}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white"
+      {/* Forgot Password Modal with Spring Scale Entrance */}
+      <AnimatePresence>
+        {forgotModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              variants={scaleIn}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full max-w-md bg-navy-900 border border-navy-750 rounded-2xl p-6 space-y-4 shadow-2xl relative"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <button
+                onClick={() => {
+                  setForgotModalOpen(false);
+                  setResetError(null);
+                  setResetSuccessMessage(null);
+                }}
+                className="absolute right-4 top-4 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
 
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/40 text-violet-400 flex items-center justify-center">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Reset Account Password</h3>
-                <p className="text-xs text-slate-400">We'll dispatch a secure recovery link</p>
-              </div>
-            </div>
-
-            {resetSuccessMessage ? (
-              <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-300 flex items-start space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <p>{resetSuccessMessage}</p>
-              </div>
-            ) : (
-              <form onSubmit={handlePasswordReset} className="space-y-3">
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Enter the email associated with your CartPilot AI account. Supabase Auth will send a secure password reset link.
-                </p>
-
-                <div className="space-y-1">
-                  <label htmlFor="reset-email" className="block text-xs font-semibold text-slate-300">
-                    Email Address
-                  </label>
-                  <input
-                    id="reset-email"
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="name@domain.com"
-                    disabled={resetSubmitting}
-                    className="w-full bg-navy-950 border border-navy-750 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-electric-500"
-                  />
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/40 text-violet-400 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
                 </div>
-
-                {resetError && (
-                  <p className="text-[11px] text-rose-400 font-medium">{resetError}</p>
-                )}
-
-                <div className="flex space-x-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setForgotModalOpen(false)}
-                    className="flex-1 py-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 text-xs font-semibold"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={resetSubmitting}
-                    className="flex-1 py-2 rounded-xl bg-electric-600 hover:bg-electric-500 text-white text-xs font-bold"
-                  >
-                    {resetSubmitting ? 'Sending Link...' : 'Send Recovery Link'}
-                  </button>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Reset Account Password</h3>
+                  <p className="text-xs text-slate-400">We'll dispatch a secure recovery link</p>
                 </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+              </div>
+
+              {resetSuccessMessage ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-300 flex items-start space-x-2"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <p>{resetSuccessMessage}</p>
+                </motion.div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-3">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Enter the email associated with your CartPilot AI account. Supabase Auth will send a secure password reset link.
+                  </p>
+
+                  <div className="space-y-1">
+                    <label htmlFor="reset-email" className="block text-xs font-semibold text-slate-300">
+                      Email Address
+                    </label>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="name@domain.com"
+                      disabled={resetSubmitting}
+                      className="w-full bg-navy-950 border border-navy-750 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-electric-500 focus:ring-2 focus:ring-electric-500/20 transition-all"
+                    />
+                  </div>
+
+                  <AnimatePresence>
+                    {resetError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: 'auto' }}
+                        exit={{ opacity: 0, y: -4, height: 0 }}
+                        className="text-[11px] text-rose-400 font-medium overflow-hidden"
+                      >
+                        {resetError}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="flex space-x-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setForgotModalOpen(false)}
+                      className="flex-1 py-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 text-xs font-semibold transition-colors"
+                    >
+                      Close
+                    </button>
+                    <AnimatedButton
+                      type="submit"
+                      disabled={resetSubmitting}
+                      className="flex-1 py-2 rounded-xl bg-electric-600 hover:bg-electric-500 text-white text-xs font-bold transition-colors disabled:opacity-60"
+                    >
+                      {resetSubmitting ? 'Sending Link...' : 'Send Recovery Link'}
+                    </AnimatedButton>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Subtle Security Attestation */}
-      <div className="mt-6 flex items-center space-x-2 text-[11px] text-slate-400 font-medium">
+      <motion.div
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="mt-6 flex items-center space-x-2 text-[11px] text-slate-400 font-medium"
+      >
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
         <span>End-to-End Encrypted Authentication via Supabase Auth</span>
-      </div>
-    </div>
+      </motion.div>
+    </PageTransition>
   );
 }

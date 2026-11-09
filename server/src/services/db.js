@@ -9,6 +9,56 @@ import { supabase, supabaseAdmin, isSupabaseConfigured } from '../config/supabas
 // 1. PRODUCTS SERVICES
 // ------------------------------------------------------------------------------
 
+/**
+ * Format a database product row with structured variants, options, and availability flags.
+ * Preserves all original database fields while elevating variant status.
+ */
+export function formatProductWithVariants(product) {
+  if (!product) return null;
+
+  const rawVariants = Array.isArray(product.specs?.variants) ? product.specs.variants : [];
+  const rawOptions = Array.isArray(product.specs?.options) ? product.specs.options : [];
+  const isProductActive = product.lifecycle_status === 'active';
+
+  const formattedVariants = rawVariants.map((v) => {
+    const stock = Number(v.stock) !== undefined && v.stock !== null ? Number(v.stock) : 0;
+    const isSoldOut = stock <= 0;
+    const isAvailable = stock > 0 && isProductActive && Boolean(product.in_stock);
+
+    return {
+      variant_id: v.variant_id || v.id,
+      id: v.uuid || v.variant_id || v.sku,
+      uuid: v.uuid,
+      sku: v.sku,
+      title: v.title,
+      options: v.options || {},
+      price: Number(v.price),
+      compare_at_price: v.compare_at_price ? Number(v.compare_at_price) : null,
+      stock,
+      in_stock: stock > 0,
+      is_available: isAvailable,
+      is_sold_out: isSoldOut,
+      disabled: !isAvailable,
+    };
+  });
+
+  return {
+    ...product,
+    price: Number(product.price),
+    original_price: product.original_price ? Number(product.original_price) : null,
+    stock: Number(product.stock) || 0,
+    has_variants: formattedVariants.length > 0,
+    total_variants: formattedVariants.length,
+    options: rawOptions,
+    variants: formattedVariants,
+    is_available: Boolean(product.in_stock) && isProductActive,
+    catalogue_source: product.catalogue_source || 'aptdot_synthetic',
+    verification_tier: product.verification_tier || 'synthetic',
+    lifecycle_status: product.lifecycle_status || 'active',
+    currency: product.currency || 'USD',
+  };
+}
+
 export async function getDbProducts(filters = {}) {
   if (!isSupabaseConfigured()) return null;
 
@@ -20,11 +70,13 @@ export async function getDbProducts(filters = {}) {
     search,
     minPrice,
     maxPrice,
-    inStock = true,
-    limit = 50,
+    currency = 'USD',
+    inStock,
+    limit = 100,
     offset = 0,
     sortBy = 'created_at',
     sortOrder = 'desc',
+    includeInactive = false,
   } = filters;
 
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
@@ -36,14 +88,34 @@ export async function getDbProducts(filters = {}) {
   let query = client
     .from('products')
     .select('*')
-    .eq('in_stock', inStock)
     .range(safeOffset, safeOffset + safeLimit - 1)
     .order(safeSortBy, { ascending: isAscending });
 
+  // 1. Lifecycle filter: Exclude draft and archived from normal public catalogue results
+  if (!includeInactive) {
+    query = query.eq('lifecycle_status', 'active');
+  }
+
+  // 2. Strict Unified Catalogue Source: Aptdot Synthetic Catalogue ONLY
+  query = query.eq('catalogue_source', 'aptdot_synthetic');
+
+  // 3. Currency filter
+  if (currency && typeof currency === 'string') {
+    query = query.eq('currency', currency.trim().toUpperCase());
+  }
+
+  // 4. In-Stock filter (if explicitly passed)
+  if (inStock !== undefined && inStock !== null && inStock !== '' && inStock !== 'all') {
+    const isInStock = String(inStock).toLowerCase() === 'true';
+    query = query.eq('in_stock', isInStock);
+  }
+
+  // 5. Category filter
   if (category && category !== 'All') {
     query = query.ilike('category', `%${category.trim()}%`);
   }
 
+  // 6. Price Range filter
   if (minPrice !== undefined && minPrice !== null && !isNaN(Number(minPrice))) {
     query = query.gte('price', Number(minPrice));
   }
@@ -52,17 +124,16 @@ export async function getDbProducts(filters = {}) {
     query = query.lte('price', Number(maxPrice));
   }
 
+  // 7. Search filter
   if (search && typeof search === 'string' && search.trim()) {
     const rawTokens = search.trim().replace(/[^a-zA-Z0-9\s-]/g, '').split(/\s+/).filter(t => t.length >= 2);
     if (rawTokens.length > 0) {
       const orConditions = [];
-      // Exact full search phrase match
       const fullPhrase = rawTokens.join(' ');
       orConditions.push(`title.ilike.%${fullPhrase}%`);
       orConditions.push(`brand.ilike.%${fullPhrase}%`);
       orConditions.push(`description.ilike.%${fullPhrase}%`);
 
-      // Individual keyword tokens
       rawTokens.slice(0, 4).forEach(tok => {
         orConditions.push(`title.ilike.%${tok}%`);
         orConditions.push(`brand.ilike.%${tok}%`);
@@ -78,32 +149,32 @@ export async function getDbProducts(filters = {}) {
     throw error;
   }
 
-  return data;
+  return (data || []).map(formatProductWithVariants);
 }
 
 export async function getDbProductByIdOrSlug(identifier) {
-  if (!isSupabaseConfigured()) return null;
+  if (!identifier) return null;
 
-  const client = supabaseAdmin || supabase;
-  if (!client) return null;
+  if (isSupabaseConfigured()) {
+    const client = supabaseAdmin || supabase;
+    if (client) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      const query = client.from('products').select('*');
+      if (isUuid) {
+        query.eq('id', identifier);
+      } else {
+        query.eq('slug', identifier);
+      }
 
-  const query = client.from('products').select('*');
-  if (isUuid) {
-    query.eq('id', identifier);
-  } else {
-    query.eq('slug', identifier);
+      const { data, error } = await query.single();
+      if (!error && data) {
+        return formatProductWithVariants(data);
+      }
+    }
   }
 
-  const { data, error } = await query.single();
-  if (error) {
-    if (error.code === 'PGRST116') return null; // Not found
-    console.error('[DB Service] getDbProductByIdOrSlug error:', error.message);
-    throw error;
-  }
-
-  return data;
+  return null;
 }
 
 // ------------------------------------------------------------------------------
@@ -334,17 +405,29 @@ export async function createDbOrder(orderPayload) {
 
   // 2. Insert line items
   if (items && items.length > 0) {
-    const orderItems = items.map(item => ({
-      order_id: order.id,
-      product_id: item.productId,
-      title: item.title,
-      brand: item.brand || 'Authorized Hardware',
-      image_url: item.image || item.imageUrl,
-      quantity: item.quantity,
-      unit_price: item.unitPrice || item.price,
-      total_price: (item.unitPrice || item.price) * item.quantity,
-      currency,
-      serial_number: `SN-${item.brand ? item.brand.substring(0, 3).toUpperCase() : 'CP'}-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    const orderItems = await Promise.all(items.map(async (item) => {
+      let validProductId = null;
+      if (item.productId) {
+        const { data: prodRow } = await supabaseAdmin
+          .from('products')
+          .select('id')
+          .eq('id', item.productId)
+          .maybeSingle();
+        if (prodRow) validProductId = prodRow.id;
+      }
+
+      return {
+        order_id: order.id,
+        product_id: validProductId,
+        title: item.title,
+        brand: item.brand || 'Authorized Hardware',
+        image_url: item.image || item.imageUrl,
+        quantity: item.quantity,
+        unit_price: item.unitPrice || item.price,
+        total_price: (item.unitPrice || item.price) * item.quantity,
+        currency,
+        serial_number: `SN-${item.brand ? item.brand.substring(0, 3).toUpperCase() : 'CP'}-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      };
     }));
 
     const { error: itemsError } = await supabaseAdmin
@@ -463,6 +546,16 @@ export async function mintDbPurchasePassport(passportPayload) {
   const returnDeadline = new Date(purchaseDate.getTime() + returnWindowDays * 24 * 60 * 60 * 1000);
   const warrantyExpires = new Date(purchaseDate.getTime() + warrantyMonths * 30 * 24 * 60 * 60 * 1000);
 
+  let validProductId = null;
+  if (productId) {
+    const { data: prodRow } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .maybeSingle();
+    if (prodRow) validProductId = prodRow.id;
+  }
+
   // 1. Insert Purchase Passport
   const { data: passport, error: passError } = await supabaseAdmin
     .from('purchase_passports')
@@ -471,7 +564,7 @@ export async function mintDbPurchasePassport(passportPayload) {
       order_id: orderId,
       order_item_id: orderItemId,
       user_id: userId,
-      product_id: productId,
+      product_id: validProductId,
       product_title: productTitle,
       brand,
       image_url: imageUrl,
@@ -499,7 +592,7 @@ export async function mintDbPurchasePassport(passportPayload) {
     .insert({
       passport_id: passport.id,
       user_id: userId,
-      product_id: productId,
+      product_id: validProductId,
       provider: `${brand} Official Service Network`,
       duration_months: warrantyMonths,
       coverage_type: 'Manufacturer Comprehensive',
@@ -557,24 +650,26 @@ export async function getDbUserPassports(userId) {
 // 7. STOCK MANAGEMENT & ORDER LOOKUPS
 // ------------------------------------------------------------------------------
 
-let cachedEffectiveUserId = null;
-
 export async function getEffectiveUserId(preferredId) {
   const isUuid = preferredId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(preferredId);
-  if (isUuid) {
-    return preferredId;
-  }
-
-  if (cachedEffectiveUserId) {
-    return cachedEffectiveUserId;
-  }
 
   if (isSupabaseConfigured() && supabaseAdmin) {
     try {
-      const { data } = await supabaseAdmin.auth.admin.listUsers();
+      if (isUuid) {
+        const { data: userRecord } = await supabaseAdmin.auth.admin.getUserById(preferredId);
+        if (userRecord?.user?.id) {
+          return userRecord.user.id;
+        }
+      }
+
+      const { data } = await supabaseAdmin.auth.admin.listUsers({ perPage: 25 });
       if (data?.users && data.users.length > 0) {
-        cachedEffectiveUserId = data.users[0].id;
-        return cachedEffectiveUserId;
+        const permanentUser =
+          data.users.find((u) => u.email === 'arshashank49@gmail.com') ||
+          data.users.find((u) => u.email === 'demo@cartpilot.ai') ||
+          data.users.find((u) => !u.email?.includes('test_user_')) ||
+          data.users[0];
+        return permanentUser.id;
       }
 
       // If no users exist, create default demo auth user
@@ -586,14 +681,13 @@ export async function getEffectiveUserId(preferredId) {
       });
 
       if (!error && created?.user) {
-        cachedEffectiveUserId = created.user.id;
         await supabaseAdmin.from('profiles').upsert({
           id: created.user.id,
           email: created.user.email,
           full_name: 'Shashank AR',
           currency: 'INR',
         });
-        return cachedEffectiveUserId;
+        return created.user.id;
       }
     } catch (authErr) {
       console.warn('[DB Service] Could not fetch/create auth user:', authErr.message);
@@ -684,6 +778,7 @@ export async function findDbOrderByRef(orderRef) {
 }
 
 export default {
+  formatProductWithVariants,
   getDbProducts,
   getDbProductByIdOrSlug,
   getDbProfile,

@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -9,445 +9,750 @@ import {
   Clock,
   Compass,
   Layers,
-  ChevronRight,
   Search,
-  ExternalLink,
   Bot,
   Package,
+  User,
+  ShoppingBag,
+  CreditCard,
+  CheckCircle2,
+  Star,
+  Flame,
+  Truck,
+  RotateCcw,
+  Zap,
+  Tag,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
-import TiltCard from '../components/common/TiltCard';
-
-const HeroProductComposition3D = lazy(() => import('../components/3d/HeroProductComposition3D'));
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const {
-    products,
-    orders,
-    passports,
+    products = [],
+    orders = [],
+    passports = [],
     budget,
     addToCart,
-    addToCompare,
-    setSelectedIntelligenceProduct,
+    showToast,
   } = useApp();
 
+  const safeProducts = useMemo(() => (Array.isArray(products) ? products.filter(Boolean) : []), [products]);
+  const safeOrders = useMemo(() => (Array.isArray(orders) ? orders.filter(Boolean) : []), [orders]);
+  const safePassports = useMemo(() => (Array.isArray(passports) ? passports.filter(Boolean) : []), [passports]);
+
+  // Search & Prompt input state
   const [quickInput, setQuickInput] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Countdown timer for Deal of the Day (Hours, Minutes, Seconds)
+  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 24, seconds: 48 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 12, minutes: 0, seconds: 0 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handlePromptSubmit = (e) => {
+    e.preventDefault();
+    if (quickInput.trim()) {
+      navigate(`/assistant?q=${encodeURIComponent(quickInput.trim())}`);
+    }
+  };
 
   const handleQuickPrompt = (promptText) => {
     navigate(`/assistant?q=${encodeURIComponent(promptText)}`);
   };
 
-  const handleInputSubmit = (e) => {
-    e.preventDefault();
-    if (quickInput.trim()) {
-      handleQuickPrompt(quickInput.trim());
-    }
-  };
+  // Derive categories from products
+  const categories = useMemo(() => {
+    const set = new Set(safeProducts.map((p) => p.category).filter(Boolean));
+    return ['All', ...Array.from(set)];
+  }, [safeProducts]);
 
-  const recentSearches = [
-    'ANC headphones under ₹35,000',
-    'MacBook M3 vs Dell XPS 15',
-    'Mechanical keyboards with QMK/VIA',
-    'OLED monitors 240Hz with burn-in warranty',
-    'Sub-249g camera drones',
-  ];
+  // Filter products by selected category
+  const filteredProducts = useMemo(() => {
+    if (selectedCategory === 'All') return safeProducts.slice(0, 8);
+    return safeProducts.filter((p) => p.category === selectedCategory).slice(0, 8);
+  }, [safeProducts, selectedCategory]);
 
-  const suggestedPrompts = [
-    {
-      title: 'Evidence-Backed Headphone Comparison',
-      desc: 'Compare Sony XM5 vs Bose Ultra acoustic benchmarks and warranty policies',
-      prompt: 'Compare Sony WH-1000XM5 and Bose QuietComfort Ultra focusing on noise cancellation benchmarks, return windows, and warranty terms.',
-    },
-    {
-      title: 'Creator Laptop Architecture Evaluation',
-      desc: 'Check thermal throttling and RAM upgradeability on M3 Pro vs XPS 15',
-      prompt: 'Is the Dell XPS 15 or Apple MacBook Pro 14 better for heavy software development and sustained rendering?',
-    },
-    {
-      title: 'Return Policy & Warranty Analysis',
-      desc: 'Evaluate fine-print restocking fees and replacement terms across displays',
-      prompt: 'Check the warranty coverage for OLED burn-in on the LG 27 UltraGear monitor.',
-    },
-  ];
+  // Featured Deal Product (e.g. Headphones or Watch)
+  const dealProduct = useMemo(() => {
+    return (
+      safeProducts.find((p) => (p.title || '').toLowerCase().includes('headphones')) ||
+      safeProducts[0] || {
+        id: 'deal-prod-1',
+        title: 'Active Noise Cancelling Wireless Headphones',
+        brand: 'Aptdot Audio',
+        price: 149.0,
+        originalPrice: 199.0,
+        rating: 4.9,
+        reviewsCount: 342,
+        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
+        description: 'Hybrid active noise cancellation, 40mm titanium drivers, 38-hour battery, and verified 30-day return rights.',
+      }
+    );
+  }, [safeProducts]);
 
-  const budgetPercent = Math.min(100, Math.round((budget.spentThisMonth / budget.monthlyLimit) * 100));
+  // Hero Spotlight Product
+  const heroProduct = useMemo(() => {
+    return safeProducts[1] || dealProduct;
+  }, [safeProducts, dealProduct]);
+
+  // Budget calculations in USD
+  const monthlyLimit = budget?.monthlyLimit || 3000;
+  const spentThisMonth = budget?.spentThisMonth || 0;
+  const budgetPercent = Math.min(100, Math.round((spentThisMonth / monthlyLimit) * 100));
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome & AI Launchpad Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 border border-navy-750 p-6 sm:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-electric-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="max-w-2xl flex-1">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-electric-400" />
-              <span>CartPilot Agentic Commerce • Prototype Demo Environment</span>
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Welcome back, <span className="bg-gradient-to-r from-electric-400 via-violet-300 to-cyan-300 bg-clip-text text-transparent">Alex</span>
-            </h2>
-            <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Your shopping agent is active. Ask questions in natural language, evaluate specifications, or inspect your digital purchase passports and active return deadlines. All catalogue items and orders are populated with realistic sample data for hackathon evaluation.
-            </p>
-
-            {/* Quick AI Prompt Input */}
-            <form onSubmit={handleInputSubmit} className="mt-6">
-              <div className="relative flex items-center shadow-lg shadow-black/40">
-                <Bot className="absolute left-4 w-5 h-5 text-electric-400" />
-                <input
-                  type="text"
-                  value={quickInput}
-                  onChange={(e) => setQuickInput(e.target.value)}
-                  placeholder="Ask your shopping agent (e.g., 'Find me a travel-ready drone under ₹1,20,000 with obstacle avoidance')..."
-                  className="w-full bg-navy-950/90 border border-navy-700 focus:border-electric-400 rounded-2xl pl-12 pr-32 py-3.5 text-xs text-white placeholder-slate-400 focus:outline-none transition-all"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 px-4 py-2 rounded-xl bg-gradient-to-r from-electric-500 to-violet-600 hover:from-electric-400 hover:to-violet-500 text-white text-xs font-bold shadow-glow-blue transition-all flex items-center space-x-1.5"
-                >
-                  <span>Ask Agent</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
-
-            {/* Quick Search Tag Pills */}
-            <div className="mt-4 flex items-center flex-wrap gap-2 text-xs text-slate-400">
-              <span className="text-[11px] font-semibold text-slate-400">Recent Searches:</span>
-              {recentSearches.map((term, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleQuickPrompt(term)}
-                  className="px-2.5 py-1 rounded-lg bg-navy-800/80 hover:bg-navy-750 border border-navy-700 text-slate-300 text-[11px] hover:text-white transition-colors"
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Lightweight Floating 3D Product Composition */}
-          <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0 w-80 h-64 xl:w-96 xl:h-72">
-            <Suspense fallback={<div className="w-full h-full rounded-2xl bg-navy-950/40 animate-pulse" />}>
-              <HeroProductComposition3D className="w-full h-full" />
-            </Suspense>
-            <span className="text-[10px] text-slate-500 font-mono text-center -mt-2">
-              Interactive 3D Hardware Composition
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Shopping Overview & Statistics */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Monthly Budget */}
-        <div className="p-5 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Monthly Budget Cap</span>
-            <div className="p-2 rounded-lg bg-electric-500/10 text-electric-400">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">
-                {formatCurrency(budget.spentThisMonth)}
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                / {formatCurrency(budget.monthlyLimit)}
-              </span>
-            </div>
-            <div className="w-full bg-navy-950 rounded-full h-2 mt-2 overflow-hidden border border-navy-800">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  budgetPercent > 80 ? 'bg-amber-400' : 'bg-gradient-to-r from-electric-500 to-violet-500'
-                }`}
-                style={{ width: `${budgetPercent}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              {budgetPercent}% of monthly spending threshold utilized
-            </p>
-          </div>
-        </div>
-
-        {/* Metric 2: Active Passports */}
-        <div className="p-5 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Digital Passports</span>
-            <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400">
-              <FileKey className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">{passports.length}</span>
-              <span className="text-xs text-violet-400 font-medium">Sample Records</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Simulated proof-of-purchase tokens, serial tracking, and warranty records
-            </p>
-            <Link to="/passport" className="text-[11px] text-electric-400 hover:underline mt-2 inline-flex items-center space-x-1">
-              <span>View Passports</span>
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Metric 3: Active Return Deadlines */}
-        <div className="p-5 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Return Deadlines</span>
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">2 Active</span>
-              <span className="text-xs text-amber-400 font-medium">10d & 22d left</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Automated reminders prevent missed refund cutoffs (Sample tracking)
-            </p>
-            <Link to="/passport" className="text-[11px] text-amber-400 hover:underline mt-2 inline-flex items-center space-x-1">
-              <span>Inspect Deadlines</span>
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Metric 4: Seed Inventory Coverage */}
-        <div className="p-5 rounded-2xl bg-navy-900 border border-navy-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Catalogue Seed</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-baseline space-x-2">
-              <span className="text-xl font-bold font-mono text-white">{products.length} Items</span>
-              <span className="text-xs text-emerald-400 font-medium">Sample Inventory</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Structured manufacturer specifications for demo testing
-            </p>
-            <Link to="/discover" className="text-[11px] text-emerald-400 hover:underline mt-2 inline-flex items-center space-x-1">
-              <span>Browse Catalogue</span>
-              <ChevronRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Suggested Shopping Prompts */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-electric-400" />
-              <span>Suggested Agentic Inquiries</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Click any scenario to load a dialogue in the AI Assistant
-            </p>
-          </div>
-          <Link
-            to="/assistant"
-            className="text-xs text-electric-400 hover:text-electric-300 font-medium flex items-center space-x-1"
-          >
-            <span>Open Assistant</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+    <div className="space-y-10 pb-16">
+      {/* 1. TOP STORE ANNOUNCEMENT STRIP */}
+      <div className="rounded-emp bg-[#084a3d] text-[#dbeee7] px-4 sm:px-6 py-2.5 text-xs flex flex-wrap items-center justify-between gap-3 shadow-emp-sm">
+        <p className="flex items-center space-x-2 font-medium">
+          <span className="text-emp-accent">✦</span>
+          <span>
+            Free express shipping on orders over <strong>$50 USD</strong> • Authenticated PayPal Sandbox Orders v2 Gateway
+          </span>
+        </p>
+        <div className="flex items-center space-x-4 text-[11px] font-semibold">
+          <Link to="/orders" className="hover:text-white transition-colors">
+            Order Ledger ({safeOrders.length})
           </Link>
+          <span className="text-[#0c6b58]">•</span>
+          <Link to="/passport" className="hover:text-white transition-colors">
+            Passports ({safePassports.length})
+          </Link>
+          <span className="text-[#0c6b58]">•</span>
+          <span className="text-white font-mono bg-[#0c6b58] px-2 py-0.5 rounded-pill">
+            USD ($)
+          </span>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {suggestedPrompts.map((s, idx) => (
-            <div
-              key={idx}
-              onClick={() => handleQuickPrompt(s.prompt)}
-              className="p-5 rounded-2xl bg-navy-900 border border-navy-800 hover:border-electric-500/50 hover:bg-navy-850 cursor-pointer transition-all duration-200 group flex flex-col justify-between"
-            >
+      {/* 2. EMPORIUM DUAL-COLUMN HERO */}
+      <section className="relative overflow-hidden rounded-emp-lg bg-gradient-to-br from-[#e7f3ef]/80 via-white to-white border border-emp-surface-line p-6 sm:p-10 lg:p-12 shadow-emp-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          {/* Left Column: Heading, Value Props & CTAs */}
+          <div className="lg:col-span-7 space-y-6">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill bg-white border border-emp-brand-100 text-emp-brand-700 font-body font-bold text-xs shadow-emp-sm">
+              <Sparkles className="w-3.5 h-3.5 text-emp-brand" />
+              <span>Autumn 2026 Collection • Autonomous Benchmark Goods</span>
+            </span>
+
+            <h1 className="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-[1.12] text-emp-ink">
+              Find better.{' '}
+              <em className="text-emp-brand not-italic">Buy smarter.</em>
+            </h1>
+
+            <p className="font-body text-base text-emp-ink-secondary leading-relaxed max-w-xl">
+              Discover products, compare your options and make confident purchase decisions with AI.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <a href="#featured-products" className="btn-emp btn-emp-primary">
+                <span>Shop the Collection</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
+              <Link to="/assistant" className="btn-emp btn-emp-secondary">
+                <Bot className="w-4 h-4 text-emp-brand" />
+                <span>Ask AI Assistant</span>
+              </Link>
+            </div>
+
+            {/* Hero Trust Metrics Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-emp-surface-line text-xs">
               <div>
-                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider block mb-1">
-                  Scenario #{idx + 1}
-                </span>
-                <h4 className="text-xs font-semibold text-slate-200 group-hover:text-electric-300 transition-colors">
-                  {s.title}
-                </h4>
-                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                  {s.desc}
-                </p>
+                <strong className="block font-display font-extrabold text-xl text-emp-ink">
+                  {safeProducts.length || 50}
+                </strong>
+                <span className="text-emp-ink-muted">Aptdot Products</span>
               </div>
-              <div className="mt-4 pt-3 border-t border-navy-800/80 flex items-center justify-between text-[11px] text-electric-400 group-hover:translate-x-1 transition-transform">
-                <span>Start Evaluation</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+              <div>
+                <strong className="block font-display font-extrabold text-xl text-emp-ink">
+                  135
+                </strong>
+                <span className="text-emp-ink-muted">Hardware Variants</span>
+              </div>
+              <div>
+                <strong className="block font-display font-extrabold text-xl text-emp-ink">
+                  30-Day
+                </strong>
+                <span className="text-emp-ink-muted">Guaranteed Returns</span>
+              </div>
+              <div>
+                <strong className="block font-display font-extrabold text-xl text-emp-ink text-emp-brand">
+                  Orders v2
+                </strong>
+                <span className="text-emp-ink-muted">PayPal Certified</span>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured Verified Products & Recent Purchases Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Top Verified Hardware */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Featured Sample Hardware</span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Sample products with structured specifications and policy terms
-              </p>
-            </div>
-            <Link to="/discover" className="text-xs text-electric-400 hover:underline">
-              View All ({products.length})
-            </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {products.slice(0, 4).map((product) => (
-              <TiltCard
-                key={product.id}
-                className="rounded-2xl bg-navy-900 border border-navy-800 p-4 hover:border-navy-700 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-navy-950 mb-3">
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-navy-950/80 backdrop-blur-sm text-[10px] font-bold text-electric-300 border border-navy-750">
-                      {product.tag}
-                    </span>
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-navy-900/90 text-slate-300 text-[10px] font-medium border border-navy-750">
-                      Sample Data
-                    </span>
-                  </div>
+          {/* Right Column: Hero Showcase Card */}
+          <div className="lg:col-span-5 relative">
+            <div className="relative rounded-emp-lg bg-emp-surface-tint border border-emp-surface-line overflow-hidden shadow-emp-lg group">
+              <div className="aspect-[4/3] overflow-hidden bg-white">
+                <img
+                  src={heroProduct.image || heroProduct.image_url}
+                  alt={heroProduct.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
 
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                    {product.brand} • {product.category}
+              {/* Floating Sale Tag */}
+              <div className="absolute top-4 right-4 bg-emp-accent text-white font-display font-bold text-xs uppercase px-3 py-1.5 rounded-pill shadow-glow-coral">
+                Top Rated Choice
+              </div>
+
+              <div className="p-5 bg-white space-y-2 border-t border-emp-surface-line">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-emp-brand font-bold uppercase tracking-wider text-[10px]">
+                    {heroProduct.brand} • {heroProduct.category}
                   </span>
-                  <h4 className="text-xs font-semibold text-slate-200 mt-1 line-clamp-2">
-                    {product.title}
-                  </h4>
+                  <div className="flex items-center space-x-1 text-emp-gold">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span className="font-bold text-emp-ink">{heroProduct.rating || 4.8}</span>
+                  </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-navy-800/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-black font-mono text-white">
-                      {formatCurrency(product.price)}
+                <h3 className="font-display font-bold text-sm text-emp-ink line-clamp-1">
+                  {heroProduct.title}
+                </h3>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-baseline space-x-2">
+                    <span className="font-display font-extrabold text-lg text-emp-ink">
+                      {formatCurrency(heroProduct.price, 'USD')}
                     </span>
-                    {product.originalPrice > product.price && (
-                      <span className="text-[10px] line-through text-slate-500 ml-1.5 font-mono">
-                        {formatCurrency(product.originalPrice)}
+                    {heroProduct.originalPrice && heroProduct.originalPrice > heroProduct.price && (
+                      <span className="text-xs text-emp-ink-muted line-through">
+                        {formatCurrency(heroProduct.originalPrice, 'USD')}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      onClick={() => {
-                        setSelectedIntelligenceProduct(product);
-                        navigate('/intelligence');
-                      }}
-                      title="Inspect Purchase Intelligence"
-                      className="p-1.5 rounded-lg bg-navy-800 hover:bg-navy-750 text-slate-300 hover:text-white transition-colors"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => addToCompare(product)}
-                      title="Add to Comparison"
-                      className="p-1.5 rounded-lg bg-navy-800 hover:bg-navy-750 text-slate-300 hover:text-white transition-colors"
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="px-2.5 py-1.5 rounded-lg bg-electric-600 hover:bg-electric-500 text-white text-xs font-semibold shadow-sm transition-colors"
-                    >
-                      + Cart
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      addToCart(heroProduct);
+                      showToast(`Added "${heroProduct.title}" to cart`, 'success');
+                    }}
+                    className="btn-emp btn-emp-primary text-xs py-2 px-4 shadow-emp-sm"
+                  >
+                    <span>Quick Add</span>
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              </TiltCard>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Dual Secondary Promo Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 pt-8 border-t border-emp-surface-line">
+          <Link
+            to="/discover?category=Electronics"
+            className="group relative rounded-emp overflow-hidden p-6 bg-gradient-to-r from-[#0c6b58] to-[#084a3d] text-white flex items-center justify-between shadow-emp-sm hover:shadow-emp transition-all"
+          >
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#cfe8e0] uppercase tracking-wider block">
+                Audio & Acoustic Hardware
+              </span>
+              <h4 className="font-display font-bold text-lg sm:text-xl">
+                ANC Headphones from $32.00
+              </h4>
+              <span className="inline-flex items-center space-x-1 text-xs font-semibold text-white group-hover:underline pt-1">
+                <span>Explore catalogue</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
+              <Sparkles className="w-7 h-7 text-[#cfe8e0]" />
+            </div>
+          </Link>
+
+          <Link
+            to="/discover?category=Hydration"
+            className="group relative rounded-emp overflow-hidden p-6 bg-gradient-to-r from-[#16211d] to-[#253831] text-white flex items-center justify-between shadow-emp-sm hover:shadow-emp transition-all"
+          >
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[#bfe3d8] uppercase tracking-wider block">
+                Hydration & Lifestyle
+              </span>
+              <h4 className="font-display font-bold text-lg sm:text-xl">
+                Stainless Steel Essentials
+              </h4>
+              <span className="inline-flex items-center space-x-1 text-xs font-semibold text-white group-hover:underline pt-1">
+                <span>Inspect finishes</span>
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-white flex-shrink-0">
+              <ShieldCheck className="w-7 h-7 text-[#bfe3d8]" />
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {/* 3. AI SHOPPING AGENT LAUNCHPAD (Conversational Prompt Strip) */}
+      <section className="rounded-emp-lg bg-white border border-emp-surface-line p-6 shadow-emp-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emp-brand-050 text-emp-brand flex items-center justify-center border border-emp-brand-100">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-base text-emp-ink">
+                CartPilot Autonomous Shopping Agent
+              </h3>
+              <p className="font-body text-xs text-emp-ink-muted">
+                Ask in natural language to compare hardware specs, find variants, or review return policies.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/assistant"
+            className="inline-flex items-center space-x-1.5 text-xs font-bold text-emp-brand hover:text-emp-brand-700 transition-colors"
+          >
+            <span>Open Dedicated AI Workspace</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <form onSubmit={handlePromptSubmit} className="relative">
+          <div className="emp-search-pill p-1.5 pr-2">
+            <Bot className="w-5 h-5 text-emp-brand ml-2 flex-shrink-0" />
+            <input
+              type="text"
+              value={quickInput}
+              onChange={(e) => setQuickInput(e.target.value)}
+              placeholder="Ask agent: 'Find ANC wireless headphones with over 30 hours battery under $150'..."
+              className="emp-search-input px-3 text-sm"
+            />
+            <button
+              type="submit"
+              className="btn-emp btn-emp-primary text-xs py-2 px-5 flex-shrink-0 shadow-emp-sm"
+            >
+              <span>Ask Agent</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </form>
+
+        {/* Suggested Prompt Chips */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+          <span className="text-emp-ink-muted font-medium text-[11px]">Quick prompts:</span>
+          {[
+            'Compare Active Noise Cancelling Headphones against benchmark audio',
+            'Show me available sizes and colors for the Insulated Water Bottle',
+            'What strap and lens combinations are available for the Minimalist Watch?',
+            'Find all products under $100 eligible for free shipping',
+          ].map((prompt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleQuickPrompt(prompt)}
+              className="px-3 py-1 rounded-pill bg-emp-surface-tint hover:bg-emp-brand-050 border border-emp-surface-line hover:border-emp-brand-100 text-emp-ink-secondary hover:text-emp-brand-700 text-[11px] font-medium transition-colors"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. SHOP BY CATEGORY (Emporium .cats Grid) */}
+      <section className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-[11px] font-bold text-emp-brand uppercase tracking-wider">
+              Browse the Store
+            </p>
+            <h2 className="font-display font-bold text-xl sm:text-2xl text-emp-ink">
+              Shop by Category
+            </h2>
+          </div>
+          <Link
+            to="/discover"
+            className="text-xs font-bold text-emp-brand hover:text-emp-brand-700 flex items-center space-x-1"
+          >
+            <span>View all 50 products</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { name: 'Audio', label: 'Audio & Sound', count: '12 items', icon: '🎧' },
+            { name: 'Hydration', label: 'Hydration & Bottle', count: '8 items', icon: '💧' },
+            { name: 'Wearables', label: 'Watches & Tech', count: '10 items', icon: '⌚' },
+            { name: 'Home', label: 'Smart Home & Living', count: '9 items', icon: '🏠' },
+            { name: 'Office', label: 'Computing & Office', count: '11 items', icon: '⌨️' },
+            { name: 'Deals', label: 'Special Markdowns', count: 'Up to 30% Off', icon: '🔥', isDeal: true },
+          ].map((cat, idx) => (
+            <Link
+              key={idx}
+              to={`/discover?category=${encodeURIComponent(cat.name)}`}
+              className={`flex flex-col items-center text-center p-5 rounded-emp border transition-all duration-200 group ${
+                cat.isDeal
+                  ? 'bg-gradient-to-b from-emp-accent-050 to-white border-[#f7d9cb] hover:shadow-emp'
+                  : 'bg-white border-emp-surface-line hover:border-emp-brand-100 hover:shadow-emp hover:-translate-y-1'
+              }`}
+            >
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mb-3 ${
+                cat.isDeal ? 'bg-emp-accent text-white shadow-glow-coral' : 'bg-emp-surface-tint group-hover:bg-emp-brand-050'
+              }`}>
+                <span>{cat.icon}</span>
+              </div>
+              <span className="font-display font-bold text-sm text-emp-ink group-hover:text-emp-brand">
+                {cat.label}
+              </span>
+              <span className={`text-[11px] mt-1 ${
+                cat.isDeal ? 'text-emp-accent font-bold' : 'text-emp-ink-muted'
+              }`}>
+                {cat.count}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 5. DEAL OF THE DAY COUNTDOWN SHOWCASE (Emporium .deal) */}
+      <section className="rounded-emp-lg bg-gradient-to-r from-[#084a3d] via-[#0c6b58] to-[#0a5a4a] text-white p-6 sm:p-10 shadow-emp">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-5 relative">
+            <div className="aspect-[4/3] rounded-emp overflow-hidden bg-white/10 shadow-emp-lg">
+              <img
+                src={dealProduct.image || dealProduct.image_url}
+                alt={dealProduct.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="absolute top-3 left-3 bg-emp-accent text-white font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-pill shadow-glow-coral">
+              Deal of the Day
+            </span>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <span className="text-[11px] font-bold text-[#bfe3d8] uppercase tracking-wider block">
+              Today only • Limited Sandbox Stock
+            </span>
+
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
+              {dealProduct.title}
+            </h2>
+
+            <div className="flex items-center space-x-2 text-xs text-[#d7ede6]">
+              <div className="flex text-emp-gold">
+                {'★★★★★'.split('').map((s, i) => (
+                  <span key={i}>{s}</span>
+                ))}
+              </div>
+              <span className="font-semibold text-white">
+                {dealProduct.rating || 4.9} ({dealProduct.reviewsCount || 342} verified reviews)
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#d7ede6] leading-relaxed max-w-xl">
+              {dealProduct.description || 'Premium benchmark hardware with full cryptographic passport attestation and instant PayPal Sandbox settlement.'}
+            </p>
+
+            <div className="flex items-baseline space-x-3 pt-1">
+              <span className="font-display font-black text-3xl text-white">
+                {formatCurrency(dealProduct.price, 'USD')}
+              </span>
+              <span className="text-base text-[#a7cfc4] line-through">
+                {formatCurrency(dealProduct.originalPrice || dealProduct.price * 1.3, 'USD')}
+              </span>
+              <span className="bg-emp-accent text-white text-xs font-bold px-2.5 py-1 rounded-pill">
+                Save 25%
+              </span>
+            </div>
+
+            {/* Countdown Display Units */}
+            <div className="flex items-center space-x-2 pt-2">
+              <div className="flex flex-col items-center bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 min-w-[56px]">
+                <b className="font-display font-extrabold text-xl font-mono">
+                  {String(timeLeft.hours).padStart(2, '0')}
+                </b>
+                <small className="text-[9px] uppercase tracking-wider text-[#bfe3d8]">Hrs</small>
+              </div>
+              <span className="font-bold text-lg text-[#7fc3b1]">:</span>
+              <div className="flex flex-col items-center bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 min-w-[56px]">
+                <b className="font-display font-extrabold text-xl font-mono">
+                  {String(timeLeft.minutes).padStart(2, '0')}
+                </b>
+                <small className="text-[9px] uppercase tracking-wider text-[#bfe3d8]">Min</small>
+              </div>
+              <span className="font-bold text-lg text-[#7fc3b1]">:</span>
+              <div className="flex flex-col items-center bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 min-w-[56px]">
+                <b className="font-display font-extrabold text-xl font-mono">
+                  {String(timeLeft.seconds).padStart(2, '0')}
+                </b>
+                <small className="text-[9px] uppercase tracking-wider text-[#bfe3d8]">Sec</small>
+              </div>
+            </div>
+
+            {/* Stock Level Progress */}
+            <div className="space-y-1.5 max-w-md pt-1">
+              <div className="h-2 bg-white/20 rounded-pill overflow-hidden">
+                <div className="h-full bg-emp-accent rounded-pill" style={{ width: '74%' }} />
+              </div>
+              <p className="text-[11px] text-[#d7ede6]">
+                <strong className="text-white">37 units claimed</strong> • only 13 remaining in sandbox stage
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  addToCart(dealProduct);
+                  showToast(`Added Deal of the Day "${dealProduct.title}" to cart!`, 'success');
+                }}
+                className="btn-emp btn-emp-accent py-3 px-8 text-sm font-bold shadow-glow-coral"
+              >
+                <span>Add to Cart • {formatCurrency(dealProduct.price, 'USD')}</span>
+                <ShoppingBag className="w-4 h-4 ml-1" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. FEATURED PRODUCTS WITH EMPORIUM FILTER TABS */}
+      <section id="featured-products" className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold text-emp-brand uppercase tracking-wider">
+              Handpicked this Week
+            </p>
+            <h2 className="font-display font-bold text-xl sm:text-2xl text-emp-ink">
+              Featured Aptdot Products
+            </h2>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap gap-2">
+            {categories.slice(0, 5).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-pill text-xs font-semibold transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-emp-brand text-white shadow-emp-sm'
+                    : 'bg-white border border-emp-surface-line text-emp-ink-secondary hover:border-emp-brand-100 hover:text-emp-brand'
+                }`}
+              >
+                {cat}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Right Column: Recent Purchases & Passport Alerts */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
-                <FileKey className="w-4 h-4 text-violet-400" />
-                <span>Recent Purchases</span>
-              </h3>
-              <p className="text-xs text-slate-400">Sample order records</p>
-            </div>
-            <Link to="/orders" className="text-xs text-electric-400 hover:underline">
-              Ledger
-            </Link>
-          </div>
+        {/* Product Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => {
+            const hasDiscount = product.originalPrice && product.originalPrice > product.price;
 
-          <div className="space-y-3">
-            {orders.slice(0, 3).map((order) => {
-              const item = order.items[0];
-              return (
-                <div
-                  key={order.orderId}
-                  className="p-4 rounded-2xl bg-navy-900 border border-navy-800 text-xs space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-slate-400 text-[11px]">{order.orderId}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-[10px] font-semibold">
-                      {order.status}
+            return (
+              <article
+                key={product.id}
+                className="pcard-emp group"
+              >
+                <div className="relative aspect-square overflow-hidden bg-emp-surface-tint">
+                  <img
+                    src={product.image || product.image_url}
+                    alt={product.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+
+                  {/* Badge */}
+                  {hasDiscount ? (
+                    <span className="badge-emp badge-emp-sale absolute top-3 left-3 z-10">
+                      Sale
                     </span>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-12 h-12 rounded-xl object-cover bg-navy-950 flex-shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-200 truncate">{item.title}</p>
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                        {formatCurrency(order.total)} • {order.paymentMethod}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-navy-800/80 flex items-center justify-between text-[11px]">
-                    <span className="text-amber-400 flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{item.returnDaysRemaining > 0 ? `${item.returnDaysRemaining}d return window` : 'Return window closed'}</span>
+                  ) : (
+                    <span className="badge-emp badge-emp-best absolute top-3 left-3 z-10">
+                      Verified
                     </span>
-                    <Link
-                      to="/passport"
-                      className="text-electric-400 hover:underline flex items-center space-x-0.5"
+                  )}
+
+                  {/* Quick Add Overlay on Hover */}
+                  <div className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      onClick={() => {
+                        addToCart(product);
+                        showToast(`Added "${product.title}" to cart`, 'success');
+                      }}
+                      className="w-full py-2.5 rounded-pill bg-emp-ink text-white hover:bg-emp-brand font-bold text-xs flex items-center justify-center space-x-1.5 shadow-emp transition-colors"
                     >
-                      <span>Passport</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </Link>
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Quick Add</span>
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="p-4 flex flex-col flex-1 justify-between space-y-2">
+                  <div>
+                    <span className="text-[10px] font-bold text-emp-brand uppercase tracking-wider block">
+                      {product.brand} • {product.category}
+                    </span>
+                    <h3 className="font-display font-bold text-sm text-emp-ink line-clamp-2 mt-1 group-hover:text-emp-brand transition-colors">
+                      <Link to={`/discover?q=${encodeURIComponent(product.title)}`}>
+                        {product.title}
+                      </Link>
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-emp-surface-line/60">
+                    <div className="flex items-center space-x-1 text-xs">
+                      <div className="flex text-emp-gold">
+                        {'★★★★★'.split('').map((s, i) => (
+                          <span key={i}>{s}</span>
+                        ))}
+                      </div>
+                      <span className="text-emp-ink-muted text-[11px] font-medium">
+                        {product.rating || 4.7} ({product.reviewsCount || 128})
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between">
+                      <div className="flex items-baseline space-x-2">
+                        <span className="font-display font-extrabold text-base text-emp-ink">
+                          {formatCurrency(product.price, 'USD')}
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-xs text-emp-ink-muted line-through">
+                            {formatCurrency(product.originalPrice, 'USD')}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="text-[10px] text-emp-brand font-bold font-mono">
+                        In Stock ({product.stock || 50})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 7. BRAND TRUST BAR (Emporium .trust Section) */}
+      <section className="rounded-emp-lg bg-emp-surface-tint border border-emp-surface-line p-6 sm:p-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex items-center space-x-3.5 p-2">
+            <div className="w-12 h-12 rounded-xl bg-white border border-emp-brand-100 text-emp-brand flex items-center justify-center flex-shrink-0 shadow-emp-sm">
+              <Truck className="w-6 h-6" />
+            </div>
+            <div>
+              <strong className="block font-display font-bold text-sm text-emp-ink">
+                Free Express Shipping
+              </strong>
+              <span className="text-xs text-emp-ink-muted">
+                On all orders over $50 USD
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3.5 p-2">
+            <div className="w-12 h-12 rounded-xl bg-white border border-emp-brand-100 text-emp-brand flex items-center justify-center flex-shrink-0 shadow-emp-sm">
+              <CreditCard className="w-6 h-6" />
+            </div>
+            <div>
+              <strong className="block font-display font-bold text-sm text-emp-ink">
+                PayPal Sandbox Gateway
+              </strong>
+              <span className="text-xs text-emp-ink-muted">
+                Authentic Orders v2 settlement
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3.5 p-2">
+            <div className="w-12 h-12 rounded-xl bg-white border border-emp-brand-100 text-emp-brand flex items-center justify-center flex-shrink-0 shadow-emp-sm">
+              <FileKey className="w-6 h-6" />
+            </div>
+            <div>
+              <strong className="block font-display font-bold text-sm text-emp-ink">
+                Purchase Passports
+              </strong>
+              <span className="text-xs text-emp-ink-muted">
+                Cryptographic hardware registry
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3.5 p-2">
+            <div className="w-12 h-12 rounded-xl bg-white border border-emp-brand-100 text-emp-brand flex items-center justify-center flex-shrink-0 shadow-emp-sm">
+              <RotateCcw className="w-6 h-6" />
+            </div>
+            <div>
+              <strong className="block font-display font-bold text-sm text-emp-ink">
+                30-Day Free Returns
+              </strong>
+              <span className="text-xs text-emp-ink-muted">
+                Automated window countdowns
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* 8. MEMBER FINANCIAL & BUDGET GUARDRAILS CARD */}
+      <section className="rounded-emp-lg bg-white border border-emp-surface-line p-6 shadow-emp-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emp-surface-line">
+          <div className="flex items-center space-x-2 text-emp-ink font-display font-bold text-base">
+            <TrendingUp className="w-5 h-5 text-emp-brand" />
+            <span>Monthly Budget Guardrail & Member Health</span>
+          </div>
+          <span className="text-xs font-mono font-bold text-emp-brand bg-emp-brand-050 px-2.5 py-1 rounded-pill border border-emp-brand-100">
+            {budgetPercent}% of monthly ceiling used
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
+          <div>
+            <span className="text-emp-ink-muted block text-[11px]">Spent this Month</span>
+            <strong className="font-display font-extrabold text-lg text-emp-ink block mt-0.5">
+              {formatCurrency(spentThisMonth, 'USD')}
+            </strong>
+          </div>
+          <div>
+            <span className="text-emp-ink-muted block text-[11px]">Monthly Ceiling</span>
+            <strong className="font-display font-extrabold text-lg text-emp-ink block mt-0.5">
+              {formatCurrency(monthlyLimit, 'USD')}
+            </strong>
+          </div>
+          <div>
+            <span className="text-emp-ink-muted block text-[11px]">Ledger Transactions</span>
+            <strong className="font-display font-extrabold text-lg text-emp-brand block mt-0.5">
+              {safeOrders.length} Verified Orders
+            </strong>
+          </div>
+        </div>
+
+        <div className="w-full bg-emp-surface-tint rounded-pill h-2.5 overflow-hidden border border-emp-surface-line">
+          <div
+            className={`h-full rounded-pill transition-all duration-500 ${
+              budgetPercent > 80 ? 'bg-emp-accent' : 'bg-emp-brand'
+            }`}
+            style={{ width: `${budgetPercent}%` }}
+          />
+        </div>
+      </section>
     </div>
   );
 }

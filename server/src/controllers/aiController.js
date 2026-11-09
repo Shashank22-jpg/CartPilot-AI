@@ -65,23 +65,23 @@ export async function getSuggestedPrompts(req, res) {
   const prompts = [
     {
       title: 'Compare Headphones',
-      prompt: 'Compare the Sony WH-1000XM5 and Bose QuietComfort Ultra for frequent flights.',
-      category: 'Audio',
+      prompt: 'Compare the Active Noise Cancelling Wireless Headphones against benchmark audio gear.',
+      category: 'Electronics',
     },
     {
-      title: 'Dev Laptop under ₹2 Lakh',
-      prompt: 'Find the best laptop with high RAM for software development under ₹2,00,000.',
-      category: 'Laptops',
+      title: 'Fitness Gear',
+      prompt: 'Show me available sizes and colors for the Insulated Stainless Steel Water Bottle.',
+      category: 'Health & Fitness',
     },
     {
-      title: 'Gaming Console',
-      prompt: 'Recommend a handheld gaming console under ₹65,000 with high refresh rate.',
-      category: 'Gaming',
+      title: 'Minimalist Watch Variants',
+      prompt: 'What strap and dial color combinations are available for the Minimalist Analog Watch?',
+      category: 'Apparel & Accessories',
     },
     {
-      title: 'Custom Keyboard',
-      prompt: 'What mechanical keyboards with aluminum chassis do you have in stock?',
-      category: 'Keyboards',
+      title: 'Kitchen Appliances',
+      prompt: 'Recommend temperature control appliances for pour-over coffee under $120.',
+      category: 'Home & Kitchen',
     },
   ];
 

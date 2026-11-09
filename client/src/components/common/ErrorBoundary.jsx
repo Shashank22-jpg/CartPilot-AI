@@ -22,7 +22,7 @@ export default class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.href = '/dashboard';
+    window.location.replace('/dashboard');
   };
 
   render() {
@@ -45,7 +45,12 @@ export default class ErrorBoundary extends React.Component {
 
             {this.state.error && (
               <div className="p-4 rounded-xl bg-navy-950 border border-navy-800 text-left overflow-x-auto text-[11px] font-mono text-rose-300">
-                {this.state.error.toString()}
+                <div className="font-bold">{this.state.error.toString()}</div>
+                {this.state.errorInfo?.componentStack && (
+                  <pre className="mt-2 text-[10px] text-slate-400 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                )}
               </div>
             )}
 

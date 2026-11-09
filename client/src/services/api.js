@@ -1,7 +1,9 @@
+import { getCurrentSession } from './supabase';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 /**
- * Common fetch wrapper with error handling
+ * Common fetch wrapper with error handling and automatic Bearer JWT attachment
  */
 async function fetchJson(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -9,6 +11,15 @@ async function fetchJson(endpoint, options = {}) {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
+
+  try {
+    const session = await getCurrentSession();
+    if (session?.access_token) {
+      defaultHeaders['Authorization'] = `Bearer ${session.access_token}`;
+    }
+  } catch {
+    // Session token retrieval is non-blocking
+  }
 
   try {
     const response = await fetch(url, {
@@ -52,17 +63,35 @@ export const apiService = {
   },
 
   /**
-   * Retrieve products from API (Supabase or seed fallback)
+   * Retrieve products from API (Supabase with multi-catalogue support)
    */
   async getProducts(params = {}) {
     const query = new URLSearchParams();
+    if (params.catalogue) query.set('catalogue', params.catalogue);
+    if (params.currency) query.set('currency', params.currency);
     if (params.category && params.category !== 'All') query.set('category', params.category);
     if (params.search) query.set('search', params.search);
-    if (params.minPrice) query.set('minPrice', params.minPrice);
-    if (params.maxPrice) query.set('maxPrice', params.maxPrice);
+    if (params.minPrice !== undefined && params.minPrice !== null && params.minPrice !== '') query.set('minPrice', params.minPrice);
+    if (params.maxPrice !== undefined && params.maxPrice !== null && params.maxPrice !== '') query.set('maxPrice', params.maxPrice);
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.sortOrder) query.set('sortOrder', params.sortOrder);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.offset) query.set('offset', params.offset);
 
     const qs = query.toString() ? `?${query.toString()}` : '';
     return fetchJson(`/api/products${qs}`);
+  },
+
+  /**
+   * Shortcut route to retrieve Aptdot CC0 Synthetic Demo catalogue
+   */
+  async getAptdotProducts(params = {}) {
+    const query = new URLSearchParams();
+    if (params.category && params.category !== 'All') query.set('category', params.category);
+    if (params.search) query.set('search', params.search);
+    if (params.limit) query.set('limit', params.limit);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return fetchJson(`/api/products/aptdot${qs}`);
   },
 
   /**
@@ -145,6 +174,13 @@ export const apiService = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  /**
+   * Retrieve current authenticated user's profile from Supabase
+   */
+  async getMyProfile() {
+    return fetchJson('/api/auth/me');
   },
 
   /**

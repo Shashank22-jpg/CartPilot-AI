@@ -1,19 +1,30 @@
 import { Router } from 'express';
-import { getDbProducts, getDbProductByIdOrSlug } from '../services/db.js';
-import { seedProducts } from '../data/seedProducts.js';
+import { getDbProducts, getDbProductByIdOrSlug, formatProductWithVariants } from '../services/db.js';
 import { isSupabaseConfigured } from '../config/supabase.js';
 
 const router = Router();
 
 /**
- * GET /api/products
- * Retrieve structured product catalogue with filtering & search
+ * Core handler for retrieving product catalogue
  */
-router.get('/', async (req, res, next) => {
+async function handleGetProducts(req, res, next) {
   try {
-    const { category, search, minPrice, maxPrice, limit, offset, sortBy, sortOrder } = req.query;
+    const {
+      category,
+      search,
+      minPrice,
+      maxPrice,
+      currency = 'USD',
+      inStock,
+      limit = 100,
+      offset = 0,
+      sortBy,
+      sortOrder,
+    } = req.query;
 
-    // Input validation
+    const cleanCatalogue = 'aptdot_synthetic';
+
+    // Input validation for price filters
     if (minPrice !== undefined && minPrice !== '') {
       const numMin = Number(minPrice);
       if (isNaN(numMin) || numMin < 0) {
@@ -63,60 +74,70 @@ router.get('/', async (req, res, next) => {
 
     if (isSupabaseConfigured()) {
       try {
-        const dbProducts = await getDbProducts(req.query);
+        const dbProducts = await getDbProducts({
+          catalogue: cleanCatalogue,
+          category,
+          search,
+          minPrice,
+          maxPrice,
+          currency,
+          inStock,
+          limit,
+          offset,
+          sortBy,
+          sortOrder,
+          includeInactive: false, // strictly exclude draft and archived products
+        });
+
         if (dbProducts !== null) {
+          const uniqueCurrencies = [...new Set(dbProducts.map((p) => p.currency))];
           return res.status(200).json({
             success: true,
             source: 'supabase',
+            catalogue: 'aptdot',
             count: dbProducts.length,
+            currencies: uniqueCurrencies,
             data: dbProducts,
           });
         }
       } catch (dbErr) {
-        console.warn('[Products API] Supabase query failed, using seed fallback:', dbErr.message);
+        console.warn('[Products API] Supabase query failed:', dbErr.message);
       }
-    }
-
-    // High-fidelity fallback to server seed catalogue
-    let filtered = [...seedProducts];
-
-    if (category && category !== 'All') {
-      filtered = filtered.filter(p => p.category.toLowerCase() === category.toLowerCase());
-    }
-
-    if (minPrice) {
-      filtered = filtered.filter(p => p.price >= Number(minPrice));
-    }
-
-    if (maxPrice) {
-      filtered = filtered.filter(p => p.price <= Number(maxPrice));
-    }
-
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-      );
     }
 
     return res.status(200).json({
       success: true,
-      source: 'seed_fallback',
-      count: filtered.length,
-      data: filtered,
-      notice: 'Serving demonstration seed inventory.',
+      source: 'database',
+      catalogue: cleanCatalogue,
+      count: 0,
+      currencies: [],
+      data: [],
+      notice: 'No products available for this catalogue query.',
     });
   } catch (err) {
     next(err);
   }
+}
+
+/**
+ * GET /api/products
+ * Retrieve structured product catalogue with multi-catalogue filtering, search & pagination.
+ */
+router.get('/', handleGetProducts);
+
+/**
+ * GET /api/products/aptdot
+ * Convenience endpoint returning exclusively the Aptdot synthetic demo catalogue
+ */
+router.get('/aptdot', (req, res, next) => {
+  req.query.catalogue = 'aptdot_demo';
+  return handleGetProducts(req, res, next);
 });
 
 /**
  * GET /api/products/:idOrSlug
- * Retrieve single product by UUID or slug
+ * Retrieve single product by UUID or slug with full variant matrix.
+ * Draft products are strictly hidden from the public API (returns 404).
  */
 router.get('/:idOrSlug', async (req, res, next) => {
   try {
@@ -126,6 +147,14 @@ router.get('/:idOrSlug', async (req, res, next) => {
       try {
         const dbProduct = await getDbProductByIdOrSlug(idOrSlug);
         if (dbProduct) {
+          // Do not expose draft products through public API
+          if (dbProduct.lifecycle_status === 'draft') {
+            return res.status(404).json({
+              success: false,
+              error: 'Product not found',
+            });
+          }
+
           return res.status(200).json({
             success: true,
             source: 'supabase',
@@ -137,18 +166,9 @@ router.get('/:idOrSlug', async (req, res, next) => {
       }
     }
 
-    const item = seedProducts.find(p => p.id === idOrSlug || p.slug === idOrSlug);
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        error: 'Product not found',
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      source: 'seed_fallback',
-      data: item,
+    return res.status(404).json({
+      success: false,
+      error: 'Product not found',
     });
   } catch (err) {
     next(err);

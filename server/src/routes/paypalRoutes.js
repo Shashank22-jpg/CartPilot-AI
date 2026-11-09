@@ -45,7 +45,7 @@ router.post('/create-order', async (req, res, next) => {
 
     const orderResult = await createPayPalOrder({
       items,
-      currency: currency || 'INR',
+      currency: currency || 'USD',
       shippingAddress,
       notes,
       userId,
@@ -57,9 +57,11 @@ router.post('/create-order', async (req, res, next) => {
     });
   } catch (err) {
     console.error('[PayPal API] create-order error:', err.message);
-    return res.status(400).json({
+    const status = err.statusCode || 400;
+    return res.status(status).json({
       success: false,
       error: err.message || 'Failed to create PayPal Sandbox order.',
+      code: err.code || 'PAYMENT_SAFETY_REJECTED',
     });
   }
 });
@@ -93,9 +95,11 @@ router.post('/capture-order', async (req, res, next) => {
     });
   } catch (err) {
     console.error('[PayPal API] capture-order error:', err.message);
-    return res.status(400).json({
+    const status = err.statusCode || 400;
+    return res.status(status).json({
       success: false,
       error: err.message || 'Payment capture failed or could not be verified.',
+      code: err.code || 'PAYMENT_CAPTURE_REJECTED',
     });
   }
 });

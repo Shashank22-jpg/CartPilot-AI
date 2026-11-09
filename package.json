@@ -22,5 +22,8 @@
     "gemini"
   ],
   "author": "CartPilot AI Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "motion": "^14.10.1"
+  }
 }

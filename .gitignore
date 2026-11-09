@@ -44,3 +44,6 @@ Thumbs.db
 .cache/
 .vite/
 .eslintcache
+
+# Scratch reference assets
+scratch/emporium_reference/

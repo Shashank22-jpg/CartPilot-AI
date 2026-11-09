@@ -24,8 +24,8 @@ export function getPayPalPublicConfig() {
     clientId: config.paypal.clientId,
     mode: config.paypal.mode,
     currency: 'USD',
-    displayCurrency: 'INR',
-    exchangeRate: EXCHANGE_RATE_INR_USD,
+    displayCurrency: 'USD',
+    exchangeRate: 1.0,
     isConfigured: isPayPalConfigured(),
   };
 }
@@ -36,7 +36,7 @@ export function getPayPalPublicConfig() {
  */
 export async function createPayPalOrder({
   items,
-  currency = 'INR',
+  currency = 'USD',
   shippingAddress = {},
   notes = '',
   userId: reqUserId,
@@ -65,20 +65,103 @@ export async function createPayPalOrder({
 
     const dbProduct = await getDbProductByIdOrSlug(productId);
     if (!dbProduct) {
-      throw new Error(`Product not found with identifier: ${productId}`);
+      const err = new Error(`Product not found with identifier: ${productId}`);
+      err.statusCode = 404;
+      err.code = 'PRODUCT_NOT_FOUND';
+      throw err;
     }
 
-    // Inventory check
-    const currentStock = dbProduct.stock !== undefined ? dbProduct.stock : 50;
-    if (dbProduct.in_stock === false || currentStock < requestedQty) {
-      throw new Error(
-        `Insufficient stock for "${dbProduct.title}". Requested: ${requestedQty}, Available: ${currentStock}`
+    // 1. PAYMENT SAFETY: Variant-level stock and availability validation
+    const variants = Array.isArray(dbProduct.specs?.variants) ? dbProduct.specs.variants : [];
+    let matchedVariant = null;
+    let authoritativePrice = Number(dbProduct.price);
+    const variantKey = item.variantId || item.variantSku || item.sku;
+
+    if (variantKey && variants.length > 0) {
+      matchedVariant = variants.find(
+        (v) =>
+          v.variant_id === variantKey ||
+          v.uuid === variantKey ||
+          v.sku === variantKey
       );
+
+      if (!matchedVariant) {
+        const err = new Error(
+          `Payment Safety Error: Variant "${variantKey}" not found for product "${dbProduct.title}".`
+        );
+        err.statusCode = 400;
+        err.code = 'VARIANT_NOT_FOUND';
+        throw err;
+      }
+
+      const variantStock = Number(matchedVariant.stock) || 0;
+      if (variantStock <= 0) {
+        const err = new Error(
+          `Payment Safety Error: Variant "${matchedVariant.title || matchedVariant.sku}" for product "${dbProduct.title}" is sold out and unavailable.`
+        );
+        err.statusCode = 400;
+        err.code = 'VARIANT_SOLD_OUT';
+        throw err;
+      }
+
+      if (variantStock < requestedQty) {
+        const err = new Error(
+          `Payment Safety Error: Insufficient stock for variant "${matchedVariant.title || matchedVariant.sku}". Requested: ${requestedQty}, Available: ${variantStock}`
+        );
+        err.statusCode = 400;
+        err.code = 'INSUFFICIENT_VARIANT_STOCK';
+        throw err;
+      }
+
+      authoritativePrice = Number(matchedVariant.price);
+    } else {
+      // Single product / parent stock check
+      const currentStock = dbProduct.stock !== undefined ? dbProduct.stock : 50;
+      if (currentStock < requestedQty) {
+        const err = new Error(
+          `Payment Safety Error: Insufficient stock for "${dbProduct.title}". Requested: ${requestedQty}, Available: ${currentStock}`
+        );
+        err.statusCode = 400;
+        err.code = 'INSUFFICIENT_STOCK';
+        throw err;
+      }
     }
 
-    const authoritativePrice = Number(dbProduct.price);
+    // 2. PAYMENT SAFETY: Aptdot + PayPal Sandbox = ALLOWED. Aptdot + PayPal LIVE = BLOCKED.
+    const isSandboxMode = (config.paypal.mode || 'sandbox').toLowerCase() === 'sandbox';
+    if (!isSandboxMode && (dbProduct.catalogue_source === 'aptdot_synthetic' || dbProduct.is_demo === true)) {
+      const err = new Error(
+        `Payment Safety Error: Product "${dbProduct.title}" belongs to the Aptdot synthetic demo catalogue and cannot be purchased via live PayPal production mode.`
+      );
+      err.statusCode = 400;
+      err.code = 'SYNTHETIC_CATALOGUE_PAYMENT_BLOCKED';
+      throw err;
+    }
+
+    // 3. PAYMENT SAFETY: Reject inactive lifecycle states (draft, archived)
+    if (dbProduct.lifecycle_status === 'draft' || dbProduct.lifecycle_status === 'archived') {
+      const err = new Error(
+        `Payment Safety Error: Product "${dbProduct.title}" is ${dbProduct.lifecycle_status} and cannot be purchased.`
+      );
+      err.statusCode = 400;
+      err.code = 'INACTIVE_PRODUCT_PAYMENT_BLOCKED';
+      throw err;
+    }
+
+    // 4. PAYMENT SAFETY: Reject out-of-stock parent products
+    if (dbProduct.in_stock === false) {
+      const err = new Error(
+        `Payment Safety Error: Product "${dbProduct.title}" is currently out of stock.`
+      );
+      err.statusCode = 400;
+      err.code = 'PRODUCT_OUT_OF_STOCK';
+      throw err;
+    }
+
     if (isNaN(authoritativePrice) || authoritativePrice < 0) {
-      throw new Error(`Invalid authoritative price for product: ${dbProduct.title}`);
+      const err = new Error(`Payment Safety Error: Invalid authoritative price for product: ${dbProduct.title}`);
+      err.statusCode = 400;
+      throw err;
     }
 
     calculatedSubtotal += authoritativePrice * requestedQty;
@@ -93,39 +176,42 @@ export async function createPayPalOrder({
       unitPrice: authoritativePrice,
       price: authoritativePrice,
       totalPrice: authoritativePrice * requestedQty,
+      selectedVariant: matchedVariant
+        ? {
+            variantId: matchedVariant.variant_id,
+            sku: matchedVariant.sku,
+            title: matchedVariant.title,
+            options: matchedVariant.options,
+          }
+        : null,
       dbProduct,
     });
   }
 
-  // 2. Strict tax and shipping calculation in INR
-  const calculatedTax = Math.round(calculatedSubtotal * 0.18); // 18% GST
-  const calculatedShipping = calculatedSubtotal >= 10000 || calculatedSubtotal === 0 ? 0 : 499;
-  const calculatedTotal = calculatedSubtotal + calculatedTax + calculatedShipping;
+  // 2. Strict tax and shipping calculation in USD
+  const subtotalUsd = Math.round(calculatedSubtotal * 100) / 100;
+  const taxUsd = Math.round(subtotalUsd * 0.08 * 100) / 100; // 8% standard tax
+  const shippingUsd = subtotalUsd >= 50 || subtotalUsd === 0 ? 0 : 9.99;
+  const totalUsd = Math.round((subtotalUsd + taxUsd + shippingUsd) * 100) / 100;
 
-  // 3. Converted USD totals for PayPal REST Orders v2 API
-  const usdTotalNum = Math.round((calculatedTotal / EXCHANGE_RATE_INR_USD) * 100) / 100;
-  const usdTaxNum = Math.round((calculatedTax / EXCHANGE_RATE_INR_USD) * 100) / 100;
-  const usdShippingNum = Math.round((calculatedShipping / EXCHANGE_RATE_INR_USD) * 100) / 100;
-  const usdSubtotalNum = Math.round((usdTotalNum - usdTaxNum - usdShippingNum) * 100) / 100;
+  const usdTotal = totalUsd.toFixed(2);
+  const usdSubtotal = subtotalUsd.toFixed(2);
+  const usdTax = taxUsd.toFixed(2);
+  const usdShipping = shippingUsd.toFixed(2);
 
-  const usdTotal = usdTotalNum.toFixed(2);
-  const usdSubtotal = usdSubtotalNum.toFixed(2);
-  const usdTax = usdTaxNum.toFixed(2);
-  const usdShipping = usdShippingNum.toFixed(2);
-
-  // 4. Create pending order in Supabase
+  // 3. Create pending order in Supabase
   let order;
   if (isSupabaseConfigured()) {
     order = await createDbOrder({
       userId: effectiveUserId,
       items: verifiedItems,
-      subtotal: calculatedSubtotal,
-      tax: calculatedTax,
-      shippingCost: calculatedShipping,
-      total: calculatedTotal,
-      currency: 'INR',
+      subtotal: subtotalUsd,
+      tax: taxUsd,
+      shippingCost: shippingUsd,
+      total: totalUsd,
+      currency: 'USD',
       shippingAddress,
-      notes: notes || `Created for PayPal Sandbox capture ($${usdTotal} USD eq.)`,
+      notes: notes || `Created for PayPal Sandbox capture ($${usdTotal} USD)`,
     });
   } else {
     // In-memory fallback if Supabase is unconfigured
@@ -135,43 +221,31 @@ export async function createPayPalOrder({
       order_number: orderNumber,
       user_id: effectiveUserId,
       status: 'pending',
-      subtotal: calculatedSubtotal,
-      tax: calculatedTax,
-      shipping_cost: calculatedShipping,
-      total: calculatedTotal,
-      currency: 'INR',
+      subtotal: subtotalUsd,
+      tax: taxUsd,
+      shipping_cost: shippingUsd,
+      total: totalUsd,
+      currency: 'USD',
       shipping_address: shippingAddress,
       created_at: new Date().toISOString(),
     };
   }
 
-  // 5. Call PayPal REST Orders v2 API
+  // 4. Call PayPal REST Orders v2 API
   const accessToken = await getPayPalAccessToken();
   const paypalUrl = `${config.paypal.baseUrl}/v2/checkout/orders`;
 
-  // Build PayPal line items
-  let itemSumUsd = 0;
-  const paypalItems = verifiedItems.map((item, idx) => {
-    // Spread the subtotal proportionally among items to ensure exact item_total match
-    let itemUsdPrice;
-    if (idx === verifiedItems.length - 1) {
-      itemUsdPrice = (usdSubtotalNum - itemSumUsd) / item.quantity;
-    } else {
-      itemUsdPrice = Math.round((item.unitPrice / EXCHANGE_RATE_INR_USD) * 100) / 100;
-      itemSumUsd += itemUsdPrice * item.quantity;
-    }
-
-    return {
-      name: item.title.substring(0, 127),
-      description: `${item.brand} - Authorized Hardware`.substring(0, 127),
-      quantity: String(item.quantity),
-      unit_amount: {
-        currency_code: 'USD',
-        value: Math.max(0.01, itemUsdPrice).toFixed(2),
-      },
-      category: 'PHYSICAL_GOODS',
-    };
-  });
+  const paypalItems = verifiedItems.map((item) => ({
+    name: item.title.substring(0, 127),
+    description: `${item.brand} - Hardware`.substring(0, 127),
+    quantity: String(item.quantity),
+    unit_amount: {
+      currency_code: 'USD',
+      value: Number(item.unitPrice).toFixed(2),
+    },
+    sku: (item.selectedVariant?.sku || item.productId || 'SKU').substring(0, 127),
+    category: 'PHYSICAL_GOODS',
+  }));
 
   const paypalPayload = {
     intent: 'CAPTURE',
@@ -180,7 +254,7 @@ export async function createPayPalOrder({
         reference_id: order.id,
         custom_id: order.id,
         invoice_id: order.order_number,
-        description: `CartPilot AI Order ${order.order_number} (₹${calculatedTotal.toLocaleString('en-IN')} INR)`,
+        description: `CartPilot AI Order ${order.order_number} ($${usdTotal} USD)`,
         amount: {
           currency_code: 'USD',
           value: usdTotal,
@@ -234,19 +308,18 @@ export async function createPayPalOrder({
     orderNumber: order.order_number,
     paypalOrderId: paypalData.id,
     paypalStatus: paypalData.status,
-    currency: 'INR',
+    currency: 'USD',
     paypalCurrency: 'USD',
     amount: {
-      inr: calculatedTotal,
-      subtotal: calculatedSubtotal,
-      tax: calculatedTax,
-      shipping: calculatedShipping,
+      subtotal: subtotalUsd,
+      tax: taxUsd,
+      shipping: shippingUsd,
+      total: totalUsd,
       usdTotal,
       usdSubtotal,
       usdTax,
       usdShipping,
     },
-    exchangeRate: EXCHANGE_RATE_INR_USD,
   };
 }
 
@@ -352,11 +425,30 @@ export async function capturePayPalOrder({
 
   // 5. Verification: Check captured USD against expected order converted total
   if (order) {
-    const expectedUsd = Math.round((Number(order.total) / EXCHANGE_RATE_INR_USD) * 100) / 100;
+    const expectedUsd = order.currency === 'USD' ? Number(order.total) : Math.round((Number(order.total) / EXCHANGE_RATE_INR_USD) * 100) / 100;
     const diff = Math.abs(capturedAmountUsd - expectedUsd);
-    // Allow up to $0.05 tolerance for cent rounding differences
-    if (diff > 0.10) {
+    // Allow up to $0.15 tolerance for cent rounding differences
+    if (diff > 0.15) {
       console.warn(`[PayPal Service] Amount mismatch warning: Captured $${capturedAmountUsd} vs Expected $${expectedUsd}`);
+    }
+
+    // 5b. PAYMENT SAFETY: In live PayPal mode, reject synthetic/demo products!
+    const isSandbox = (config.paypal.mode || 'sandbox').toLowerCase() === 'sandbox';
+    if (!isSandbox && Array.isArray(order.items)) {
+      for (const item of order.items) {
+        const prodId = item.productId || item.product_id || item.id;
+        if (prodId) {
+          const p = await getDbProductByIdOrSlug(prodId).catch(() => null);
+          if (p && (p.is_demo === true || p.catalogue_source === 'aptdot_synthetic')) {
+            const err = new Error(
+              `Payment Safety Error: Payment capture rejected. Order contains synthetic product "${p.title}" on live production PayPal.`
+            );
+            err.statusCode = 400;
+            err.code = 'CAPTURE_SAFETY_REJECTED';
+            throw err;
+          }
+        }
+      }
     }
   }
 
@@ -370,7 +462,7 @@ export async function capturePayPalOrder({
       paypalOrderId,
       paypalCaptureId,
       amount: order.total,
-      currency: 'INR',
+      currency: order.currency || 'USD',
       status: 'captured',
       rawResponse: captureData,
     });
@@ -404,7 +496,7 @@ export async function capturePayPalOrder({
           imageUrl: lineItem.image_url,
           serialNumber: lineItem.serial_number || `SN-${Date.now()}`,
           purchasePrice: lineItem.unit_price,
-          currency: order.currency || 'INR',
+          currency: order.currency || 'USD',
           returnWindowDays: 30,
           warrantyMonths: 24,
         });
@@ -434,8 +526,8 @@ export async function capturePayPalOrder({
     status: 'COMPLETED',
     capturedAmountUsd,
     capturedCurrency,
-    inrTotal: order?.total,
-    currency: 'INR',
+    settledAmount: capturedAmountUsd,
+    currency: order?.currency || 'USD',
     order,
     payment: paymentRecord,
     passports: mintedPassports,

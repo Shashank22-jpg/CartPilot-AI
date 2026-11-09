@@ -11,25 +11,29 @@ export const aiTools = [
     functionDeclarations: [
       {
         name: 'search_products',
-        description: 'Search for products in the CartPilot catalogue from the Supabase PostgreSQL database based on search keywords, category, and price/budget constraints in INR (₹). Always use this when user asks for product recommendations, searches, or ideas.',
+        description: 'Search for products in the CartPilot catalogue from the Supabase PostgreSQL database based on search keywords, category, catalogue source, and price/budget constraints. Always use this when user asks for product recommendations, searches, or ideas.',
         parameters: {
           type: SchemaType.OBJECT,
           properties: {
             query: {
               type: SchemaType.STRING,
-              description: 'Keywords, item names, or specifications to search for (e.g. "wireless headphones", "MacBook", "mechanical keyboard", "drone", "OLED monitor").',
+              description: 'Keywords, item names, or specifications to search for (e.g. "wireless headphones", "water bottle", "mechanical keyboard", "watch", "coffee dripper", "hoodie").',
             },
             category: {
               type: SchemaType.STRING,
-              description: 'Optional category filter: Audio, Laptops, Keyboards, Monitors, Drones, Cameras, Gaming, Wearables, Smartphones, Accessories.',
+              description: 'Optional category filter: "Electronics & Accessories", "Apparel & Wearables", "Home & Kitchen", "Health & Fitness", "Office & Workspace".',
             },
             minPrice: {
               type: SchemaType.NUMBER,
-              description: 'Minimum price filter in INR (₹).',
+              description: 'Minimum price filter.',
             },
             maxPrice: {
               type: SchemaType.NUMBER,
-              description: 'Maximum budget or price cap in INR (₹).',
+              description: 'Maximum budget or price cap.',
+            },
+            catalogue: {
+              type: SchemaType.STRING,
+              description: 'Catalogue source filter: "all" (default), "aptdot_demo" (synthetic demo items in USD), or "domestic" (domestic verified items in INR).',
             },
           },
         },
@@ -42,7 +46,7 @@ export const aiTools = [
           properties: {
             productIdOrSlug: {
               type: SchemaType.STRING,
-              description: 'The product UUID or slug (e.g. "sony-wh-1000xm5", "macbook-pro-14-m3-pro", "keychron-q1-pro").',
+              description: 'The product UUID or slug (e.g. "aptdot-active-noise-cancelling-wireless-headphones", "aptdot-minimalist-analog-watch-with-sapphire-crystal", "aptdot-insulated-stainless-steel-water-bottle").',
             },
           },
           required: ['productIdOrSlug'],
@@ -89,7 +93,12 @@ const SYSTEM_INSTRUCTION = `You are CartPilot AI, an elite, professional, and tr
 Your role is to understand user shopping requirements, discover products, compare specifications, evaluate purchase information, and provide evidence-based recommendations.
 
 CORE OPERATIONAL RULES:
-1. CURRENCY: Always use Indian Rupees (INR, ₹). Never quote prices in USD, EUR, or other currencies.
+1. MULTI-CURRENCY CATALOGUE:
+   - Aptdot synthetic demo benchmark products are denominated in USD ($).
+   - Domestic products are denominated in Indian Rupees (INR, ₹).
+   - Always quote prices with their authoritative currency symbol ($ for USD, ₹ for INR) as reported by the database tools.
+   - Never assume exchange rates or merge USD and INR into a single arithmetic sum without explicitly distinguishing currencies.
+   - For Aptdot products, clearly identify them as synthetic demo benchmark inventory.
 2. HONESTY & FACTS:
    - NEVER invent or hallucinate products, prices, stock levels, or seller ratings.
    - Base all recommendations strictly on real data returned by your database tools.
@@ -99,14 +108,14 @@ CORE OPERATIONAL RULES:
    - When the user asks for suggestions, recommendations, or searches for hardware/gear, invoke \`search_products\`.
    - When the user asks for detailed technical specifications, warranty terms, or return conditions for a specific product, invoke \`get_product_details\`.
    - When the user asks to compare 2 or 3 items, invoke \`compare_products\`.
-   - When the user explicitly states they want to add an item to their cart (e.g., "Add the Sony XM5 to my cart", "I want to buy this one"), invoke \`add_to_cart\`.
+   - When the user explicitly states they want to add an item to their cart, invoke \`add_to_cart\`.
    - NEVER invoke \`add_to_cart\` unless the user explicitly requested adding or purchasing it.
 4. RECOMMENDATION CLARITY:
-   - For every recommended product, state its exact title, price in INR, and in-stock status.
-   - Explain WHY it fits the user's specific constraints (budget, battery life, performance, ergonomics).
-   - Highlight any trade-offs or key return policies (e.g., 14-day or 30-day window, restocking conditions).
+   - For every recommended product, state its exact title, price with authoritative currency, and in-stock status.
+   - Explain WHY it fits the user's specific constraints (budget, materials, performance, ergonomics).
+   - Highlight any trade-offs or key return policies.
 5. CLARIFICATION & INTERACTION:
-   - If the user request is ambiguous (e.g. "I need a computer"), ask 1-2 concise clarifying questions about their primary use case (development, creative, gaming), budget, or portability needs before searching.`;
+   - If the user request is ambiguous (e.g. "I need some gear"), ask 1-2 concise clarifying questions about their primary use case, budget, or preferences before searching.`;
 
 /**
  * Execute tool against live Supabase database
@@ -114,8 +123,9 @@ CORE OPERATIONAL RULES:
 async function executeTool(fnName, args) {
   switch (fnName) {
     case 'search_products': {
-      const { query, category, minPrice, maxPrice } = args || {};
+      const { query, category, minPrice, maxPrice, catalogue } = args || {};
       const products = await getDbProducts({
+        catalogue: catalogue || 'all',
         search: query,
         category,
         minPrice,
@@ -256,6 +266,9 @@ async function executeTool(fnName, args) {
         };
       }
 
+      const currencySymbol = product.currency === 'USD' ? '$' : '₹';
+      const formattedPrice = Number(product.price).toLocaleString(product.currency === 'USD' ? 'en-US' : 'en-IN');
+
       return {
         success: true,
         action: 'cart_add',
@@ -273,7 +286,7 @@ async function executeTool(fnName, args) {
           specs: product.specs,
         },
         quantity: validQty,
-        message: `Staged ${validQty}x "${product.title}" into your shopping cart at ₹${Number(product.price).toLocaleString('en-IN')}.`,
+        message: `Staged ${validQty}x "${product.title}" into your shopping cart at ${currencySymbol}${formattedPrice}.`,
       };
     }
 
@@ -378,7 +391,8 @@ export async function handleAgentChat({ message, history = [], context = {} }) {
 
       if (fn.name === 'search_products') {
         const queryTerm = fn.args?.query || fn.args?.category || 'catalogue';
-        activityLog.push(`Searched database catalogue for "${queryTerm}" (budget: ₹${fn.args?.maxPrice || 'any'})`);
+        const budgetStr = fn.args?.maxPrice ? ` (max: ${fn.args?.maxPrice})` : '';
+        activityLog.push(`Searched database catalogue for "${queryTerm}"${budgetStr}`);
       } else if (fn.name === 'get_product_details') {
         activityLog.push(`Retrieved verified specifications & warranty dossier for "${fn.args?.productIdOrSlug}"`);
       } else if (fn.name === 'compare_products') {

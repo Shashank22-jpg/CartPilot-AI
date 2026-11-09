@@ -1,0 +1,275 @@
+/* ==========================================================================
+   CartPilot AI — Centralized Design System
+   Hybrid Architecture: Emporium (Light Shopping) + Premium Navy (Dark AI)
+   ========================================================================== */
+
+:root {
+  /* Emporium Light Palette */
+  --emp-brand: #0c6b58;
+  --emp-brand-600: #0a5a4a;
+  --emp-brand-700: #084a3d;
+  --emp-brand-050: #e7f3ef;
+  --emp-brand-100: #cfe8e0;
+
+  --emp-accent: #f26430;
+  --emp-accent-600: #db521f;
+  --emp-accent-050: #fdeee7;
+
+  --emp-gold: #f5a623;
+  --emp-new: #2f7de1;
+
+  --emp-ink: #16211d;
+  --emp-ink-secondary: #475a53;
+  --emp-muted: #6c7c76;
+
+  --emp-line: #e5eae8;
+  --emp-line-subtle: #eef2f0;
+
+  --emp-bg: #ffffff;
+  --emp-bg-tint: #f4f8f6;
+  --emp-bg-soft: #f8faf9;
+
+  /* Typography */
+  --font-display: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  --font-body: "Manrope", Inter, system-ui, -apple-system, sans-serif;
+
+  /* Shadows */
+  --shadow-emp-sm: 0 1px 2px rgba(16, 33, 29, 0.05);
+  --shadow-emp: 0 6px 22px rgba(16, 33, 29, 0.08);
+  --shadow-emp-lg: 0 18px 48px rgba(16, 33, 29, 0.14);
+
+  /* Radii */
+  --r-sm: 8px;
+  --r: 14px;
+  --r-lg: 22px;
+  --r-pill: 9999px;
+
+  --ease-spring: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ==========================================================================
+   THEME FOUNDATIONS
+   ========================================================================== */
+
+.theme-light {
+  background-color: var(--emp-bg-soft);
+  color: var(--emp-ink);
+  color-scheme: light;
+}
+
+.theme-dark {
+  background-color: #060a13;
+  color: #f8fafc;
+  color-scheme: dark;
+}
+
+/* Base Headings */
+.theme-light h1,
+.theme-light h2,
+.theme-light h3,
+.theme-light h4 {
+  font-family: var(--font-display);
+  color: var(--emp-ink);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   EMPORIUM REUSABLE BUTTONS
+   ========================================================================== */
+
+.btn-emp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.94rem;
+  padding: 12px 24px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  line-height: 1.2;
+  text-align: center;
+  transition: transform 0.16s var(--ease-spring),
+              background-color 0.18s var(--ease-spring),
+              box-shadow 0.18s var(--ease-spring),
+              color 0.18s var(--ease-spring),
+              border-color 0.18s var(--ease-spring);
+}
+
+.btn-emp:active {
+  transform: translateY(0);
+}
+
+.btn-emp-primary {
+  background-color: var(--emp-brand);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(12, 107, 88, 0.22);
+}
+
+.btn-emp-primary:hover {
+  background-color: var(--emp-brand-600);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(12, 107, 88, 0.28);
+}
+
+.btn-emp-secondary {
+  background-color: #ffffff;
+  color: var(--emp-brand-700);
+  border-color: var(--emp-line);
+  box-shadow: var(--shadow-emp-sm);
+}
+
+.btn-emp-secondary:hover {
+  background-color: var(--emp-brand-050);
+  border-color: var(--emp-brand-100);
+  color: var(--emp-brand-700);
+  transform: translateY(-2px);
+}
+
+.btn-emp-accent {
+  background-color: var(--emp-accent);
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(242, 100, 48, 0.26);
+}
+
+.btn-emp-accent:hover {
+  background-color: var(--emp-accent-600);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(242, 100, 48, 0.34);
+}
+
+.btn-emp-line {
+  border: 1.5px solid var(--emp-line);
+  border-radius: var(--r-pill);
+  padding: 8px 18px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--emp-ink);
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s var(--ease-spring);
+}
+
+.btn-emp-line:hover {
+  border-color: var(--emp-brand-100);
+  background-color: var(--emp-brand-050);
+  color: var(--emp-brand-700);
+}
+
+/* ==========================================================================
+   EMPORIUM BADGES
+   ========================================================================== */
+
+.badge-emp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  color: #ffffff;
+  line-height: 1;
+}
+
+.badge-emp-sale,
+.badge-emp-deal {
+  background-color: var(--emp-accent);
+}
+
+.badge-emp-best {
+  background-color: var(--emp-brand);
+}
+
+.badge-emp-new {
+  background-color: var(--emp-new);
+}
+
+.badge-emp-verified {
+  background-color: var(--emp-brand-050);
+  color: var(--emp-brand-700);
+  border: 1px solid var(--emp-brand-100);
+}
+
+/* ==========================================================================
+   EMPORIUM INPUTS & SEARCH PILL
+   ========================================================================== */
+
+.emp-search-pill {
+  display: flex;
+  align-items: center;
+  background-color: var(--emp-bg-tint);
+  border: 1.5px solid var(--emp-line);
+  border-radius: var(--r-pill);
+  padding: 3px 3px 3px 18px;
+  transition: border-color 0.18s var(--ease-spring),
+              background-color 0.18s var(--ease-spring);
+}
+
+.emp-search-pill:focus-within {
+  border-color: var(--emp-brand);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(12, 107, 88, 0.12);
+}
+
+.emp-search-input {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--emp-ink);
+  padding: 8px 0;
+  outline: none;
+}
+
+.emp-search-input::placeholder {
+  color: var(--emp-muted);
+}
+
+.emp-search-btn {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--emp-brand);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.18s var(--ease-spring);
+}
+
+.emp-search-btn:hover {
+  background-color: var(--emp-brand-600);
+}
+
+/* ==========================================================================
+   PRODUCT CARDS
+   ========================================================================== */
+
+.pcard-emp {
+  background-color: #ffffff;
+  border: 1px solid var(--emp-line);
+  border-radius: var(--r);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s var(--ease-spring),
+              box-shadow 0.2s var(--ease-spring),
+              border-color 0.2s var(--ease-spring);
+}
+
+.pcard-emp:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-emp);
+  border-color: var(--emp-brand-100);
+}
