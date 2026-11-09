@@ -12,7 +12,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Activity,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -25,10 +24,7 @@ export default function Sidebar() {
     setMobileSidebarOpen,
     itemCount,
     compareList,
-    backendHealth,
   } = useApp();
-
-  const isHealthy = backendHealth?.status === 'ok';
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -184,54 +180,27 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Bottom Status & Info Section */}
-        <div className="p-3 border-t border-navy-800/80 bg-navy-950/40">
+        {/* Bottom User Profile Section */}
+        <div className="p-3 border-t border-navy-800 bg-navy-950/40">
           {!sidebarCollapsed || mobileSidebarOpen ? (
-            <div className="space-y-3">
-              <div className="p-2.5 rounded-xl bg-navy-850 border border-navy-750">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center space-x-1.5">
-                    <Activity className="w-3 h-3 text-electric-400" />
-                    <span>Backend Core</span>
-                  </span>
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isHealthy
-                        ? 'bg-emerald-400 animate-pulse-slow shadow-sm shadow-emerald-400/50'
-                        : 'bg-amber-400'
-                    }`}
-                  />
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[11px] font-mono text-slate-300">
-                  <span>{isHealthy ? 'Connected (200 OK)' : 'Pending Poll'}</span>
-                  <span className="text-[10px] text-slate-500">
-                    {backendHealth?._clientLatencyMs ? `${backendHealth._clientLatencyMs}ms` : ''}
-                  </span>
+            <div className="flex items-center space-x-3 px-2 py-2 rounded-xl bg-navy-850/60 border border-navy-750/70 hover:border-navy-700 transition-colors">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 flex-shrink-0 shadow-sm shadow-electric-500/20">
+                <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
+                  AM
                 </div>
               </div>
-
-              <div className="flex items-center space-x-3 px-1">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 flex-shrink-0">
-                  <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[10px] font-bold text-white">
-                    AM
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-slate-200 truncate">Alex Mercer</p>
-                  <p className="text-[10px] text-slate-400 truncate">Demo Environment Profile</p>
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-slate-200 truncate">Alex Mercer</p>
+                <p className="text-[10px] text-slate-400 truncate">Demo Environment Profile</p>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center space-y-3">
+            <div className="flex flex-col items-center py-1">
               <div
-                title={`API Status: ${isHealthy ? 'Live Connected' : 'Checking...'}`}
-                className={`w-3 h-3 rounded-full ${
-                  isHealthy ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                }`}
-              />
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5">
-                <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[10px] font-bold text-white">
+                title="Alex Mercer • Demo Environment Profile"
+                className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-600 to-electric-500 p-0.5 shadow-sm shadow-electric-500/20 cursor-pointer hover:scale-105 transition-transform"
+              >
+                <div className="w-full h-full rounded-full bg-navy-900 flex items-center justify-center text-[11px] font-bold text-white">
                   AM
                 </div>
               </div>

@@ -4,7 +4,6 @@ import {
   Search,
   ShoppingCart,
   Bell,
-  RefreshCw,
   ExternalLink,
   Menu,
 } from 'lucide-react';
@@ -18,9 +17,6 @@ export default function Header() {
     itemCount,
     total,
     cartTotal,
-    backendHealth,
-    isHealthLoading,
-    refreshHealth,
     passports,
     toggleMobileSidebar,
   } = useApp();
@@ -34,8 +30,6 @@ export default function Header() {
       navigate(`/discover?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
-
-  const isHealthy = backendHealth?.status === 'ok';
 
   // Get current page friendly name
   const pageTitles = {
@@ -94,28 +88,8 @@ export default function Header() {
         </div>
       </form>
 
-      {/* Action Controls & Statuses */}
+      {/* Action Controls */}
       <div className="flex items-center space-x-2 sm:space-x-3">
-        {/* Backend Health Check Pill */}
-        <button
-          onClick={refreshHealth}
-          disabled={isHealthLoading}
-          title="Click to ping backend Express API /api/health"
-          className="flex items-center space-x-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-navy-900 border border-navy-750 hover:border-navy-600 transition-colors text-xs"
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isHealthy
-                ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50'
-                : 'bg-amber-400 animate-pulse'
-            }`}
-          />
-          <span className="text-[11px] font-mono text-slate-300 hidden sm:inline">
-            {isHealthy ? 'API 200' : 'API Polling'}
-          </span>
-          <RefreshCw className={`w-3 h-3 text-slate-400 ${isHealthLoading ? 'animate-spin' : ''}`} />
-        </button>
-
         {/* Notifications Popover */}
         <div className="relative">
           <button
