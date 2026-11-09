@@ -19,6 +19,7 @@ export default function Header() {
   const location = useLocation();
   const {
     itemCount,
+    total,
     cartTotal,
     backendHealth,
     isHealthLoading,
@@ -165,7 +166,7 @@ export default function Header() {
           className="relative flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-electric-600 to-violet-600 hover:from-electric-500 hover:to-violet-500 text-white font-medium text-xs shadow-glow-blue transition-all"
         >
           <ShoppingCart className="w-4 h-4" />
-          <span className="hidden sm:inline font-mono">${cartTotal.toFixed(2)}</span>
+          <span className="hidden sm:inline font-mono">${((typeof total === 'number' ? total : cartTotal) || 0).toFixed(2)}</span>
           {itemCount > 0 && (
             <span className="w-5 h-5 rounded-full bg-white text-navy-950 text-[10px] font-black flex items-center justify-center">
               {itemCount}

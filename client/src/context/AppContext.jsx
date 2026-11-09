@@ -101,6 +101,7 @@ export function AppProvider({ children }) {
       tax: Math.round(tax * 100) / 100,
       shipping,
       total: Math.round(total * 100) / 100,
+      cartTotal: Math.round(total * 100) / 100,
       itemCount
     };
   }, [cart]);
