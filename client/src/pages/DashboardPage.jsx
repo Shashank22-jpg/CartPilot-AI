@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
+import TiltCard from '../components/common/TiltCard';
+
+const HeroProductComposition3D = lazy(() => import('../components/3d/HeroProductComposition3D'));
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -78,52 +81,64 @@ export default function DashboardPage() {
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-electric-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-electric-400" />
-            <span>CartPilot Agentic Commerce • Prototype Demo Environment</span>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="max-w-2xl flex-1">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-4">
+              <Sparkles className="w-3.5 h-3.5 text-electric-400" />
+              <span>CartPilot Agentic Commerce • Prototype Demo Environment</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Welcome back, <span className="bg-gradient-to-r from-electric-400 via-violet-300 to-cyan-300 bg-clip-text text-transparent">Alex</span>
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Your shopping agent is active. Ask questions in natural language, evaluate specifications, or inspect your digital purchase passports and active return deadlines. All catalogue items and orders are populated with realistic sample data for hackathon evaluation.
+            </p>
+
+            {/* Quick AI Prompt Input */}
+            <form onSubmit={handleInputSubmit} className="mt-6">
+              <div className="relative flex items-center shadow-lg shadow-black/40">
+                <Bot className="absolute left-4 w-5 h-5 text-electric-400" />
+                <input
+                  type="text"
+                  value={quickInput}
+                  onChange={(e) => setQuickInput(e.target.value)}
+                  placeholder="Ask your shopping agent (e.g., 'Find me a travel-ready drone under ₹1,20,000 with obstacle avoidance')..."
+                  className="w-full bg-navy-950/90 border border-navy-700 focus:border-electric-400 rounded-2xl pl-12 pr-32 py-3.5 text-xs text-white placeholder-slate-400 focus:outline-none transition-all"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 px-4 py-2 rounded-xl bg-gradient-to-r from-electric-500 to-violet-600 hover:from-electric-400 hover:to-violet-500 text-white text-xs font-bold shadow-glow-blue transition-all flex items-center space-x-1.5"
+                >
+                  <span>Ask Agent</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
+
+            {/* Quick Search Tag Pills */}
+            <div className="mt-4 flex items-center flex-wrap gap-2 text-xs text-slate-400">
+              <span className="text-[11px] font-semibold text-slate-400">Recent Searches:</span>
+              {recentSearches.map((term, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleQuickPrompt(term)}
+                  className="px-2.5 py-1 rounded-lg bg-navy-800/80 hover:bg-navy-750 border border-navy-700 text-slate-300 text-[11px] hover:text-white transition-colors"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Welcome back, <span className="bg-gradient-to-r from-electric-400 via-violet-300 to-cyan-300 bg-clip-text text-transparent">Alex</span>
-          </h2>
-          <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Your shopping agent is active. Ask questions in natural language, evaluate specifications, or inspect your digital purchase passports and active return deadlines. All catalogue items and orders are populated with realistic sample data for hackathon evaluation.
-          </p>
-
-          {/* Quick AI Prompt Input */}
-          <form onSubmit={handleInputSubmit} className="mt-6">
-            <div className="relative flex items-center shadow-lg shadow-black/40">
-              <Bot className="absolute left-4 w-5 h-5 text-electric-400" />
-              <input
-                type="text"
-                value={quickInput}
-                onChange={(e) => setQuickInput(e.target.value)}
-                placeholder="Ask your shopping agent (e.g., 'Find me a travel-ready drone under ₹1,20,000 with obstacle avoidance')..."
-                className="w-full bg-navy-950/90 border border-navy-700 focus:border-electric-400 rounded-2xl pl-12 pr-32 py-3.5 text-xs text-white placeholder-slate-400 focus:outline-none transition-all"
-              />
-              <button
-                type="submit"
-                className="absolute right-2 px-4 py-2 rounded-xl bg-gradient-to-r from-electric-500 to-violet-600 hover:from-electric-400 hover:to-violet-500 text-white text-xs font-bold shadow-glow-blue transition-all flex items-center space-x-1.5"
-              >
-                <span>Ask Agent</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </form>
-
-          {/* Quick Search Tag Pills */}
-          <div className="mt-4 flex items-center flex-wrap gap-2 text-xs text-slate-400">
-            <span className="text-[11px] font-semibold text-slate-400">Recent Searches:</span>
-            {recentSearches.map((term, i) => (
-              <button
-                key={i}
-                onClick={() => handleQuickPrompt(term)}
-                className="px-2.5 py-1 rounded-lg bg-navy-800/80 hover:bg-navy-750 border border-navy-700 text-slate-300 text-[11px] hover:text-white transition-colors"
-              >
-                {term}
-              </button>
-            ))}
+          {/* Lightweight Floating 3D Product Composition */}
+          <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0 w-80 h-64 xl:w-96 xl:h-72">
+            <Suspense fallback={<div className="w-full h-full rounded-2xl bg-navy-950/40 animate-pulse" />}>
+              <HeroProductComposition3D className="w-full h-full" />
+            </Suspense>
+            <span className="text-[10px] text-slate-500 font-mono text-center -mt-2">
+              Interactive 3D Hardware Composition
+            </span>
           </div>
         </div>
       </section>
@@ -300,7 +315,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {products.slice(0, 4).map((product) => (
-              <div
+              <TiltCard
                 key={product.id}
                 className="rounded-2xl bg-navy-900 border border-navy-800 p-4 hover:border-navy-700 transition-all flex flex-col justify-between"
               >
@@ -365,7 +380,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>

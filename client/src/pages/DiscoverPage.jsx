@@ -19,6 +19,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { productCategories } from '../data/mockProducts';
 import { formatCurrency } from '../utils/currency';
+import TiltCard from '../components/common/TiltCard';
 
 export default function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -283,7 +284,7 @@ export default function DiscoverPage() {
               {filteredProducts.map((product) => {
                 const inCompare = isInCompare(product.id);
                 return (
-                  <div
+                  <TiltCard
                     key={product.id}
                     className="rounded-2xl bg-navy-900 border border-navy-800 hover:border-navy-700 transition-all flex flex-col justify-between overflow-hidden group shadow-md"
                   >
@@ -384,7 +385,7 @@ export default function DiscoverPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </TiltCard>
                 );
               })}
             </div>

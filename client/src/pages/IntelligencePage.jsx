@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
+import TiltCard from '../components/common/TiltCard';
+
+const IntelligenceShield3D = lazy(() => import('../components/3d/IntelligenceShield3D'));
 
 export default function IntelligencePage() {
   const navigate = useNavigate();
@@ -71,8 +74,8 @@ export default function IntelligencePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Product Summary & Seller Integrity */}
         <div className="space-y-6">
-          {/* Product Profile Card */}
-          <div className="rounded-2xl bg-navy-900 border border-navy-800 p-5 space-y-4">
+          {/* Product Profile Card with 3D Tilt */}
+          <TiltCard className="rounded-2xl bg-navy-900 border border-navy-800 p-5 space-y-4">
             <div className="aspect-video rounded-xl overflow-hidden bg-navy-950">
               <img
                 src={product.image}
@@ -115,7 +118,7 @@ export default function IntelligencePage() {
                 Compare
               </button>
             </div>
-          </div>
+          </TiltCard>
 
           {/* Seller Authenticity Card */}
           <div className="rounded-2xl bg-navy-900 border border-navy-800 p-5 space-y-4">
@@ -159,21 +162,30 @@ export default function IntelligencePage() {
 
         {/* Middle & Right Column: Evidence Matrix, Concerns, and Missing Info */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Overall Confidence Score Banner */}
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 border border-navy-750 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[10px] font-bold text-electric-400 uppercase tracking-wider block mb-1">
-                CartPilot Specification Review
-              </span>
-              <h3 className="text-lg font-bold text-white">
-                {product.riskAssessment.status}
-              </h3>
-              <p className="text-xs text-slate-300 mt-1 max-w-md">
-                {product.riskAssessment.summary}
-              </p>
+          {/* Overall Confidence Score Banner with 3D Shield */}
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 border border-navy-750 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+              {/* 3D Purchase Intelligence Shield */}
+              <div className="w-24 h-28 flex-shrink-0 flex items-center justify-center self-start sm:self-center">
+                <Suspense fallback={<div className="w-16 h-20 rounded-xl bg-electric-500/20 animate-pulse" />}>
+                  <IntelligenceShield3D status={product.riskAssessment.status} size="sm" />
+                </Suspense>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold text-electric-400 uppercase tracking-wider block mb-1">
+                  CartPilot Specification Review
+                </span>
+                <h3 className="text-lg font-bold text-white">
+                  {product.riskAssessment.status}
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-md">
+                  {product.riskAssessment.summary}
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-3 bg-navy-950/80 border border-navy-800 p-4 rounded-xl flex-shrink-0">
+            <div className="flex items-center space-x-3 bg-navy-950/80 border border-navy-800 p-4 rounded-xl flex-shrink-0 self-start sm:self-center">
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">
                   Catalogue Status

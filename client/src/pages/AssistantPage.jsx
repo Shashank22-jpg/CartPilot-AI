@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bot,
   User,
@@ -16,6 +17,9 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
+import TiltCard from '../components/common/TiltCard';
+
+const AIOrb = lazy(() => import('../components/3d/AIOrb'));
 
 export default function AssistantPage() {
   const [searchParams] = useSearchParams();
@@ -31,6 +35,7 @@ export default function AssistantPage() {
   const [inputMessage, setInputMessage] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingStep, setThinkingStep] = useState('');
+  const [agentState, setAgentState] = useState('idle');
   const messagesEndRef = useRef(null);
 
   // Initial High-Fidelity Multi-turn Conversation with Transparent Sample Labels
@@ -112,20 +117,25 @@ export default function AssistantPage() {
     setMessages(prev => [...prev, userMsg]);
     if (!customText) setInputMessage('');
     setIsThinking(true);
+    setAgentState('thinking');
 
     // Realistic Agentic Simulation Steps
     setThinkingStep('Analyzing natural language requirements and constraints...');
 
     setTimeout(() => {
       setThinkingStep('Scanning structured specification database (sample catalogue)...');
+      setAgentState('searching');
     }, 700);
 
     setTimeout(() => {
       setThinkingStep('Auditing sample merchant terms and return policy conditions...');
+      setAgentState('thinking');
     }, 1400);
 
     setTimeout(() => {
       setIsThinking(false);
+      setAgentState('responding');
+      setTimeout(() => setAgentState('idle'), 2400);
 
       // Tailor response based on keywords
       const lower = textToSend.toLowerCase();
@@ -202,17 +212,26 @@ export default function AssistantPage() {
     <div className="flex flex-col h-[calc(100vh-8rem)] max-w-6xl mx-auto space-y-4">
       {/* Top Assistant Status Header */}
       <div className="flex items-center justify-between p-4 rounded-2xl bg-navy-900 border border-navy-800 shadow-md">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-electric-500 to-violet-600 p-0.5 flex items-center justify-center shadow-glow-blue">
-            <div className="w-full h-full bg-navy-950 rounded-[10px] flex items-center justify-center">
-              <Bot className="w-5 h-5 text-electric-400" />
-            </div>
+        <div className="flex items-center space-x-3.5">
+          {/* Signature 3D AI Core Avatar */}
+          <div className="w-11 h-11 relative flex-shrink-0 flex items-center justify-center">
+            <Suspense fallback={<div className="w-10 h-10 rounded-full bg-electric-500/20 animate-pulse" />}>
+              <AIOrb state={agentState} size="sm" className="w-11 h-11" />
+            </Suspense>
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-sm font-bold text-white">CartPilot Autonomous Shopping Agent</h2>
-              <span className="px-2 py-0.5 text-[10px] font-semibold bg-electric-500/10 border border-electric-500/30 text-electric-300 rounded-full">
-                Simulated Dialog
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border transition-colors ${
+                agentState === 'thinking'
+                  ? 'bg-violet-500/10 border-violet-500/30 text-violet-300'
+                  : agentState === 'searching'
+                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                  : agentState === 'responding'
+                  ? 'bg-emerald-500/10 border-emerald-300 text-emerald-300'
+                  : 'bg-electric-500/10 border-electric-500/30 text-electric-300'
+              }`}>
+                {agentState === 'idle' ? 'AI CORE ACTIVE' : agentState.toUpperCase()}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
@@ -222,6 +241,22 @@ export default function AssistantPage() {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Quick State Preview Buttons for testing */}
+          <div className="hidden md:flex items-center space-x-1 text-[10px] font-mono bg-navy-950 p-1 rounded-xl border border-navy-800">
+            {['idle', 'thinking', 'searching', 'responding'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setAgentState(st)}
+                className={`px-2 py-0.5 rounded-lg capitalize transition-colors ${
+                  agentState === st
+                    ? 'bg-electric-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
           <button
             onClick={clearChat}
             className="p-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-400 hover:text-rose-400 border border-navy-700 transition-colors"
@@ -234,13 +269,29 @@ export default function AssistantPage() {
 
       {/* Main Conversation Stream */}
       <div className="flex-1 overflow-y-auto space-y-6 p-4 rounded-2xl bg-navy-900/60 border border-navy-800 backdrop-blur-sm">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex items-start space-x-3 ${
-              msg.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-            }`}
-          >
+        {messages.length === 0 ? (
+          <div className="h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <Suspense fallback={<div className="w-28 h-28 rounded-full bg-electric-500/20 animate-pulse" />}>
+              <AIOrb state={agentState} size="lg" />
+            </Suspense>
+            <div>
+              <h3 className="text-base font-extrabold text-white">CartPilot Autonomous Core Online</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+                Your neural commerce agent is ready. Enter any product query or click a suggestion below to evaluate specifications and return policies.
+              </p>
+            </div>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className={`flex items-start space-x-3 ${
+                msg.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+              }`}
+            >
             {/* Sender Avatar */}
             <div
               className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold ${
@@ -329,7 +380,7 @@ export default function AssistantPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {msg.recommendations.map((prod) => (
-                      <div
+                      <TiltCard
                         key={prod.id}
                         className="p-3 rounded-xl bg-navy-900 border border-navy-800 hover:border-navy-700 transition-colors flex flex-col justify-between"
                       >
@@ -381,14 +432,14 @@ export default function AssistantPage() {
                             </button>
                           </div>
                         </div>
-                      </div>
+                      </TiltCard>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          </motion.div>
+        )))}
 
         {/* Live AI Thinking Indicator */}
         {isThinking && (
