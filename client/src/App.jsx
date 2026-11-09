@@ -29,6 +29,7 @@ export default function App() {
               <Route path="compare" element={<ComparePage />} />
               <Route path="intelligence" element={<IntelligencePage />} />
               <Route path="cart" element={<CartPage />} />
+              <Route path="checkout" element={<CartPage />} />
               <Route path="orders" element={<OrdersPage />} />
               <Route path="passport" element={<PassportPage />} />
               <Route path="settings" element={<SettingsPage />} />

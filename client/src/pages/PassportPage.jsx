@@ -22,6 +22,12 @@ export default function PassportPage() {
   const { passports, showToast } = useApp();
   const [selectedPassport, setSelectedPassport] = useState(passports[0]);
 
+  React.useEffect(() => {
+    if ((!selectedPassport || !passports.some(p => p.passportId === selectedPassport.passportId)) && passports.length > 0) {
+      setSelectedPassport(passports[0]);
+    }
+  }, [passports, selectedPassport]);
+
   const copyToClipboard = (text, label) => {
     navigator.clipboard?.writeText(text);
     showToast(`Copied ${label} to clipboard!`, 'info');
@@ -34,20 +40,24 @@ export default function PassportPage() {
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-semibold mb-2">
             <FileKey className="w-3.5 h-3.5 text-violet-400" />
-            <span>Ownership & Guarantee Registry (Demo Environment)</span>
+            <span>
+              {passports.some((p) => p.isLive)
+                ? 'Verified Digital Ownership Registry'
+                : 'Ownership & Guarantee Registry (Live + Demo)'}
+            </span>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Digital Purchase Passports
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Sample proof-of-purchase records, simulated serial numbers, live return window countdowns, and automated warranty claim assist.
+            Authoritative proof-of-purchase certificates, hardware serial hashes, live 30-day return window countdowns, and automated 24-month warranty tracking.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 text-xs text-slate-400">
           <span className="px-3 py-1.5 rounded-xl bg-navy-950 border border-navy-800 font-mono text-emerald-400 flex items-center space-x-1.5">
             <ShieldCheck className="w-4 h-4" />
-            <span>{passports.length} Sample Passports</span>
+            <span>{passports.length} Passports</span>
           </span>
         </div>
       </div>

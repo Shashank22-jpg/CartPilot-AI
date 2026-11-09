@@ -553,6 +553,136 @@ export async function getDbUserPassports(userId) {
   return data;
 }
 
+// ------------------------------------------------------------------------------
+// 7. STOCK MANAGEMENT & ORDER LOOKUPS
+// ------------------------------------------------------------------------------
+
+let cachedEffectiveUserId = null;
+
+export async function getEffectiveUserId(preferredId) {
+  const isUuid = preferredId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(preferredId);
+  if (isUuid) {
+    return preferredId;
+  }
+
+  if (cachedEffectiveUserId) {
+    return cachedEffectiveUserId;
+  }
+
+  if (isSupabaseConfigured() && supabaseAdmin) {
+    try {
+      const { data } = await supabaseAdmin.auth.admin.listUsers();
+      if (data?.users && data.users.length > 0) {
+        cachedEffectiveUserId = data.users[0].id;
+        return cachedEffectiveUserId;
+      }
+
+      // If no users exist, create default demo auth user
+      const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+        email: 'demo@cartpilot.ai',
+        password: 'DemoUserCartPilot2026!',
+        email_confirm: true,
+        user_metadata: { full_name: 'Shashank AR' },
+      });
+
+      if (!error && created?.user) {
+        cachedEffectiveUserId = created.user.id;
+        await supabaseAdmin.from('profiles').upsert({
+          id: created.user.id,
+          email: created.user.email,
+          full_name: 'Shashank AR',
+          currency: 'INR',
+        });
+        return cachedEffectiveUserId;
+      }
+    } catch (authErr) {
+      console.warn('[DB Service] Could not fetch/create auth user:', authErr.message);
+    }
+  }
+
+  return '00000000-0000-0000-0000-000000000001';
+}
+
+export async function decrementDbProductStock(productId, quantity = 1) {
+  if (!isSupabaseConfigured()) return null;
+
+  const client = supabaseAdmin || supabase;
+  const product = await getDbProductByIdOrSlug(productId);
+  if (!product) return null;
+
+  const currentStock = product.stock !== undefined ? product.stock : 50;
+  const newStock = Math.max(0, currentStock - quantity);
+  const isInStock = newStock > 0;
+
+  const { data, error } = await client
+    .from('products')
+    .update({
+      stock: newStock,
+      in_stock: isInStock,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', product.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[DB Service] decrementDbProductStock error:', error.message);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getDbOrderById(orderId) {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .select(`
+      *,
+      items:order_items (*),
+      payments (*),
+      passports:purchase_passports (*)
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (error) {
+    console.error('[DB Service] getDbOrderById error:', error.message);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function findDbOrderByRef(orderRef) {
+  if (!isSupabaseConfigured()) return null;
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderRef);
+  let query = supabaseAdmin
+    .from('orders')
+    .select(`
+      *,
+      items:order_items (*),
+      payments (*),
+      passports:purchase_passports (*)
+    `);
+
+  if (isUuid) {
+    query = query.eq('id', orderRef);
+  } else {
+    query = query.eq('order_number', orderRef);
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    console.error('[DB Service] findDbOrderByRef error:', error.message);
+    throw error;
+  }
+
+  return data;
+}
+
 export default {
   getDbProducts,
   getDbProductByIdOrSlug,
@@ -568,4 +698,8 @@ export default {
   recordDbPayment,
   mintDbPurchasePassport,
   getDbUserPassports,
+  getEffectiveUserId,
+  decrementDbProductStock,
+  getDbOrderById,
+  findDbOrderByRef,
 };

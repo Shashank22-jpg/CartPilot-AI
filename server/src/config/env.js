@@ -21,9 +21,10 @@ export const config = {
     clientSecret: process.env.PAYPAL_CLIENT_SECRET || '',
     webhookId: process.env.PAYPAL_WEBHOOK_ID || '',
     baseUrl:
-      process.env.PAYPAL_MODE === 'live'
+      process.env.PAYPAL_BASE_URL ||
+      (process.env.PAYPAL_MODE === 'live'
         ? 'https://api-m.paypal.com'
-        : 'https://api-m.sandbox.paypal.com',
+        : 'https://api-m.sandbox.paypal.com'),
   },
 
   supabase: {

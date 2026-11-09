@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/currency';
+import PayPalCheckoutModal from '../components/checkout/PayPalCheckoutModal';
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -32,24 +33,11 @@ export default function CartPage() {
     showToast,
   } = useApp();
 
-  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
 
   // Budget calculations
   const projectedMonthlySpend = budget.spentThisMonth + total;
   const isOverBudget = projectedMonthlySpend > budget.monthlyLimit;
-
-  const handleSimulatedPayPalSandboxCheckout = () => {
-    setIsProcessingCheckout(true);
-
-    setTimeout(() => {
-      setIsProcessingCheckout(false);
-      setCheckoutModalOpen(false);
-      clearCart();
-      showToast('Simulated PayPal Sandbox order created & passport minted!', 'success');
-      navigate('/orders');
-    }, 1800);
-  };
 
   return (
     <div className="space-y-6 pb-16">
@@ -278,67 +266,11 @@ export default function CartPage() {
         </div>
       )}
 
-      {/* Simulated PayPal Checkout Modal */}
-      {checkoutModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-navy-900 border border-navy-750 rounded-2xl p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center space-x-3 pb-3 border-b border-navy-800">
-              <div className="w-8 h-8 rounded-lg bg-[#0070BA] flex items-center justify-center text-white font-black text-sm">
-                P
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-white">PayPal Sandbox Payment Gateway</h3>
-                <p className="text-[10px] text-slate-400">Simulated Client Authorization & Server Capture</p>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 text-xs space-y-2">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Merchant:</span>
-                <span className="text-white font-medium">CartPilot AI Verified Merchants</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Payment Total:</span>
-                <span className="font-mono font-bold text-white">{formatCurrency(total)} (INR Base)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Verification Model:</span>
-                <span className="text-emerald-400 font-mono text-[11px]">Strict Server-Side Capture</span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 text-[11px] text-blue-200">
-              <p>
-                <strong>Hackathon Notice:</strong> In this test mode, clicking "Approve Sandbox Payment" simulates the customer PayPal authorization callback and exercises the order ledger + passport generation.
-              </p>
-            </div>
-
-            <div className="flex space-x-3 pt-2">
-              <button
-                onClick={() => setCheckoutModalOpen(false)}
-                disabled={isProcessingCheckout}
-                className="flex-1 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSimulatedPayPalSandboxCheckout}
-                disabled={isProcessingCheckout}
-                className="flex-1 py-2.5 rounded-xl bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold flex items-center justify-center space-x-1.5"
-              >
-                {isProcessingCheckout ? (
-                  <>
-                    <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    <span>Verifying...</span>
-                  </>
-                ) : (
-                  <span>Approve Sandbox Payment</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Real PayPal Sandbox Smart Buttons Checkout Modal */}
+      <PayPalCheckoutModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ apiRouter.use('/', healthRoutes);
 apiRouter.use('/ai', aiRoutes);
 apiRouter.use('/products', productRoutes);
 apiRouter.use('/paypal', paypalRoutes);
+apiRouter.use('/payments', paypalRoutes);
 apiRouter.use('/orders', orderRoutes);
 
 export default apiRouter;

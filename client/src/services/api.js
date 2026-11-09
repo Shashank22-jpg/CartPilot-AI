@@ -102,6 +102,40 @@ export const apiService = {
   async getAiPrompts() {
     return fetchJson('/api/ai/prompts');
   },
+
+  /**
+   * Retrieve PayPal public configuration
+   */
+  async getPaymentConfig() {
+    return fetchJson('/api/payments/config');
+  },
+
+  /**
+   * Create server-verified PayPal order
+   */
+  async createPayPalOrder(payload) {
+    return fetchJson('/api/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Capture and verify PayPal payment on server
+   */
+  async capturePayPalOrder(payload) {
+    return fetchJson('/api/payments/capture-order', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Retrieve order and payment status
+   */
+  async getOrderDetails(orderId) {
+    return fetchJson(`/api/payments/order/${orderId}`);
+  },
 };
 
 export default apiService;

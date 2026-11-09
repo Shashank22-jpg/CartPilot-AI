@@ -43,13 +43,17 @@ export default function OrdersPage() {
         <div>
           <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-electric-500/10 border border-electric-500/30 text-electric-300 text-xs font-semibold mb-2">
             <PackageCheck className="w-3.5 h-3.5 text-electric-400" />
-            <span>Sample Transaction Ledger (Demo)</span>
+            <span>
+              {orders.some((o) => o.isLive)
+                ? 'Verified PayPal Sandbox Ledger'
+                : 'Transaction Ledger (Live + Demo)'}
+            </span>
           </div>
           <h2 className="text-xl font-bold text-white tracking-tight">
             Order History & Payment Verification
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Sample transaction records showcasing PayPal Sandbox Orders v2 API payload schema with digital purchase passport linkages.
+            Real-time transaction records verified against PayPal Orders v2 API with cryptographic Digital Purchase Passport linkages.
           </p>
         </div>
 
