@@ -75,11 +75,16 @@ export default function Header() {
         </button>
 
         <div>
-          <h1 className={`text-sm font-bold tracking-tight truncate ${
-            isDarkAiRoute ? 'text-white' : 'text-emp-ink font-display'
-          }`}>
-            {currentTitle}
-          </h1>
+          <div className="flex items-center space-x-2">
+            <h1 className={`text-sm font-bold tracking-tight truncate ${
+              isDarkAiRoute ? 'text-white' : 'text-emp-ink font-display'
+            }`}>
+              {currentTitle}
+            </h1>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+              DEMO ENVIRONMENT
+            </span>
+          </div>
           <p className={`text-[11px] hidden sm:block ${
             isDarkAiRoute ? 'text-slate-400' : 'text-emp-ink-muted'
           }`}>

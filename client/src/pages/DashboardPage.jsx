@@ -115,7 +115,7 @@ export default function DashboardPage() {
   const budgetPercent = Math.min(100, Math.round((spentThisMonth / monthlyLimit) * 100));
 
   return (
-    <div className="space-y-10 pb-16">
+    <div className="space-y-8 pb-16">
       {/* 1. TOP STORE ANNOUNCEMENT STRIP */}
       <div className="rounded-emp bg-[#084a3d] text-[#dbeee7] px-4 sm:px-6 py-2.5 text-xs flex flex-wrap items-center justify-between gap-3 shadow-emp-sm">
         <p className="flex items-center space-x-2 font-medium">
@@ -124,7 +124,11 @@ export default function DashboardPage() {
             Free express shipping on orders over <strong>$50 USD</strong> • Authenticated PayPal Sandbox Orders v2 Gateway
           </span>
         </p>
-        <div className="flex items-center space-x-4 text-[11px] font-semibold">
+        <div className="flex items-center space-x-3 text-[11px] font-semibold">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/30 uppercase">
+            DEMO ENVIRONMENT
+          </span>
+          <span className="text-[#0c6b58]">•</span>
           <Link to="/orders" className="hover:text-white transition-colors">
             Order Ledger ({safeOrders.length})
           </Link>
@@ -137,6 +141,16 @@ export default function DashboardPage() {
             USD ($)
           </span>
         </div>
+      </div>
+
+      {/* 2. DEMO ENVIRONMENT NOTICE */}
+      <div className="rounded-emp border border-amber-200/90 bg-amber-50/90 text-amber-950 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3.5 text-xs shadow-emp-sm">
+        <span className="inline-flex items-center self-start sm:self-center px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-500 text-slate-950 tracking-wider shrink-0">
+          DEMO ENVIRONMENT
+        </span>
+        <p className="leading-relaxed font-medium">
+          Demo Environment: CartPilot AI currently uses synthetic product data for demonstration purposes. Product prices, availability, seller information, and purchase insights may be simulated. All payments are processed in PayPal Sandbox mode. No real transactions are made.
+        </p>
       </div>
 
       {/* 2. EMPORIUM DUAL-COLUMN HERO */}

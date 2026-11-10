@@ -1,11 +1,19 @@
 import { getHealth } from '../server/src/controllers/healthController.js';
 import { isOriginAllowed } from '../server/src/app.js';
+import { forwardToExternalBackend } from './index.js';
 
 /**
  * Dedicated Vercel Serverless Health Function
- * Serves /health and /api/health with database and service status
+ * Serves /health and /api/health
+ * - When RAILWAY_API_URL is set: Proxies to Railway backend /health
+ * - When RAILWAY_API_URL is not set: Executes local getHealth check
  */
 export default async function handler(req, res) {
+  const railwayUrl = process.env.RAILWAY_API_URL?.trim();
+  if (railwayUrl) {
+    return forwardToExternalBackend(req, res, railwayUrl);
+  }
+
   const origin = req.headers?.origin;
   if (origin && isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -28,4 +36,3 @@ export default async function handler(req, res) {
 
   return getHealth(req, res);
 }
-

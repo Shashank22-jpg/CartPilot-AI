@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import apiService from '../services/api';
+import { mockProducts } from '../data/mockProducts';
 import {
   supabase,
   getCurrentSession,
@@ -171,8 +172,8 @@ export function AppProvider({ children }) {
     showToast('Comparison list cleared', 'info');
   }, [showToast]);
 
-  // Product Catalogue State (Authoritative Supabase - Aptdot Unified Catalogue)
-  const [products, setProducts] = useState([]);
+  // Product Catalogue State (Authoritative Aptdot Unified Catalogue - 50 items & 135 variants)
+  const [products, setProducts] = useState(mockProducts);
   const [activeCatalogue, setActiveCatalogue] = useState('aptdot');
   const [productsSource, setProductsSource] = useState('supabase');
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -587,7 +588,7 @@ export function AppProvider({ children }) {
     try {
       // 1. Try Express backend API (queries live Supabase PostgreSQL)
       const res = await apiService.getProducts(filters);
-      if (res && res.data && Array.isArray(res.data)) {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         const formatted = res.data.map(normalizeProduct);
         setProducts(formatted);
         setProductsSource(res.source || 'supabase');
@@ -616,6 +617,12 @@ export function AppProvider({ children }) {
       setProductsError(err.message);
     } finally {
       setIsLoadingProducts(false);
+    }
+
+    // 3. Fallback to bundled Aptdot synthetic demo catalogue (50 products, 135 variants)
+    if (mockProducts.length > 0) {
+      setProducts(mockProducts);
+      setProductsSource('aptdot_synthetic');
     }
   }, [normalizeProduct, selectedIntelligenceProduct]);
 

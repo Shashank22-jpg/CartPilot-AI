@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
  * Generate a deterministic, theme-aligned SVG placeholder data URI for synthetic demo items.
  * Guarantees zero copyright issues, zero third-party dependencies, and clear synthetic labeling.
  */
-function generateAptdotPlaceholderSvg({ id, sku, name, category }) {
+export function generateAptdotPlaceholderSvg({ id, sku, name, category }) {
   const categoryThemes = {
     'Electronics & Accessories': { stroke: '#3B82F6', badgeBg: '#1E3A8A', text: '#93C5FD' },
     'Apparel & Wearables': { stroke: '#8B5CF6', badgeBg: '#4C1D95', text: '#C4B5FD' },
