@@ -5,22 +5,9 @@ const path = require('path');
 const http = require('http');
 
 async function fetchJson(url, options = {}) {
-  return new Promise((resolve, reject) => {
-    const req = http.request(url, options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          resolve({ status: res.statusCode, body: JSON.parse(data) });
-        } catch (e) {
-          resolve({ status: res.statusCode, raw: data });
-        }
-      });
-    });
-    req.on('error', reject);
-    if (options.body) req.write(options.body);
-    req.end();
-  });
+  const res = await fetch(url, options);
+  const data = await res.json().catch(() => null);
+  return { status: res.status, body: data };
 }
 
 function walk(dir) {
