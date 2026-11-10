@@ -1,26 +1,37 @@
 import app from './app.js';
 import config from './config/env.js';
 
-const PORT = config.port;
+const PORT = process.env.PORT || config.port || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-const server = app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 CartPilot AI Server running on port ${PORT}`);
-  console.log(`📡 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🌍 Environment:  ${config.nodeEnv}`);
-  console.log(`====================================================`);
-});
+let server = null;
 
-// Graceful shutdown handling
-const shutdown = () => {
-  console.log('\n[Server] Gracefully shutting down...');
-  server.close(() => {
-    console.log('[Server] HTTP server closed.');
-    process.exit(0);
+// Only start HTTP listener when NOT running in a serverless environment (e.g. Vercel)
+if (!process.env.VERCEL) {
+  server = app.listen(PORT, HOST, () => {
+    console.log(`====================================================`);
+    console.log(`🚀 CartPilot AI Server running on ${HOST}:${PORT}`);
+    console.log(`📡 Health Check:  http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/health`);
+    console.log(`📡 API Health:    http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api/health`);
+    console.log(`🌍 Environment:   ${config.nodeEnv}`);
+    console.log(`====================================================`);
   });
-};
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+  // Graceful shutdown handling
+  const shutdown = () => {
+    console.log('\n[Server] Gracefully shutting down...');
+    if (server) {
+      server.close(() => {
+        console.log('[Server] HTTP server closed.');
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  };
 
-export default server;
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
+
+export default app;

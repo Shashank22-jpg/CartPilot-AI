@@ -1,12 +1,14 @@
 /**
  * CartPilot AI - Rate Limiting Middleware
  * In-memory sliding window rate limiter for Gemini AI endpoints
+ * Configured safely for serverless runtimes (unref timers & lazy eviction)
  */
 
 const ipRequestMap = new Map();
 
 // Periodic cleanup of expired rate limit windows every 5 minutes
-setInterval(() => {
+// Unref timer so it never prevents serverless function execution from finishing cleanly
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [ip, data] of ipRequestMap.entries()) {
     if (now - data.resetTime > 60000) {
@@ -14,6 +16,10 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+
+if (cleanupTimer && typeof cleanupTimer.unref === 'function') {
+  cleanupTimer.unref();
+}
 
 export function rateLimiter({ windowMs = 60 * 1000, max = 30, message = 'Rate limit exceeded. Please wait a moment before sending another message.' } = {}) {
   return (req, res, next) => {
