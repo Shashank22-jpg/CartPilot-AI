@@ -36,7 +36,7 @@ function request(options, postData = null) {
 
 async function runTests() {
   console.log('======================================================================');
-  console.log('🧪 CARTPILOT AI: SINGLE SERVER & SPA INTEGRATION VERIFICATION SUITE');
+  console.log('🧪 CARTPILOT AI: UNIFIED VERCEL & SERVERLESS API SUITE');
   console.log('======================================================================\n');
 
   let passed = 0;
@@ -113,7 +113,45 @@ async function runTests() {
       `AI Shopping Prompts API GET /api/ai/prompts returns ${aiPromptsJson.data?.length || 0} prompt chips`
     );
 
-    // 7. Unknown API Route 404 (GET) - MUST NOT return HTML index.html
+    // 7. Assistant alias API
+    const assistantPromptsRes = await request({ host: 'localhost', port, path: '/api/assistant/prompts', method: 'GET' });
+    const assistantPromptsJson = JSON.parse(assistantPromptsRes.body);
+    assert(
+      assistantPromptsRes.statusCode === 200 &&
+      assistantPromptsJson.success === true &&
+      Array.isArray(assistantPromptsJson.data),
+      'Assistant Alias API GET /api/assistant/prompts resolves identically to /api/ai/prompts'
+    );
+
+    // 8. Cart Policy API
+    const cartRes = await request({ host: 'localhost', port, path: '/api/cart', method: 'GET' });
+    const cartJson = JSON.parse(cartRes.body);
+    assert(
+      cartRes.statusCode === 200 &&
+      cartJson.success === true &&
+      cartJson.currency === 'USD',
+      'Cart API GET /api/cart returns currency and guardrails policy'
+    );
+
+    // 9. Cart Validation API
+    const firstProduct = productsJson.data[0];
+    const cartValidateRes = await request({
+      host: 'localhost',
+      port,
+      path: '/api/cart/validate',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }, JSON.stringify({ items: [{ id: firstProduct.id, quantity: 2 }] }));
+    const cartValidateJson = JSON.parse(cartValidateRes.body);
+    assert(
+      cartValidateRes.statusCode === 200 &&
+      cartValidateJson.success === true &&
+      cartValidateJson.valid === true &&
+      cartValidateJson.items[0]?.quantity === 2,
+      'Cart Validation API POST /api/cart/validate correctly validates stock and item prices'
+    );
+
+    // 10. Unknown API Route 404 (GET) - MUST NOT return HTML index.html
     const unknownApiRes = await request({ host: 'localhost', port, path: '/api/non-existent-route-xyz', method: 'GET' });
     let isUnknownJson = false;
     try {
@@ -125,7 +163,7 @@ async function runTests() {
       'Unknown API route GET /api/non-existent-route-xyz returns JSON 404 (NOT SPA HTML fallback)'
     );
 
-    // 8. Unknown API Route 404 (POST)
+    // 11. Unknown API Route 404 (POST)
     const unknownApiPostRes = await request({
       host: 'localhost',
       port,
@@ -143,7 +181,7 @@ async function runTests() {
       'Unknown API route POST /api/orders/random-missing-action returns JSON 404'
     );
 
-    // 9. Root path GET / serves frontend index.html
+    // 12. Root path GET / serves frontend index.html
     const rootRes = await request({ host: 'localhost', port, path: '/', method: 'GET' });
     assert(
       rootRes.statusCode === 200 &&
@@ -152,60 +190,60 @@ async function runTests() {
       'Root GET / correctly serves client/dist/index.html'
     );
 
-    // 10. SPA Direct Route Refresh: /discover
+    // 13. SPA Direct Route Refresh: /discover
     const discoverRes = await request({ host: 'localhost', port, path: '/discover', method: 'GET' });
     assert(
       discoverRes.statusCode === 200 && discoverRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /discover falls back to SPA index.html'
     );
 
-    // 11. SPA Direct Route Refresh: /assistant
+    // 14. SPA Direct Route Refresh: /assistant
     const assistantRes = await request({ host: 'localhost', port, path: '/assistant', method: 'GET' });
     assert(
       assistantRes.statusCode === 200 && assistantRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /assistant falls back to SPA index.html'
     );
 
-    // 12. SPA Direct Route Refresh: /compare
+    // 15. SPA Direct Route Refresh: /compare
     const compareRes = await request({ host: 'localhost', port, path: '/compare', method: 'GET' });
     assert(
       compareRes.statusCode === 200 && compareRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /compare falls back to SPA index.html'
     );
 
-    // 13. SPA Direct Route Refresh: /intelligence
+    // 16. SPA Direct Route Refresh: /intelligence
     const intelRes = await request({ host: 'localhost', port, path: '/intelligence', method: 'GET' });
     assert(
       intelRes.statusCode === 200 && intelRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /intelligence falls back to SPA index.html'
     );
 
-    // 14. SPA Direct Route Refresh: /orders
+    // 17. SPA Direct Route Refresh: /orders
     const ordersRes = await request({ host: 'localhost', port, path: '/orders', method: 'GET' });
     assert(
       ordersRes.statusCode === 200 && ordersRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /orders falls back to SPA index.html'
     );
 
-    // 15. SPA Direct Route Refresh: /passport
+    // 18. SPA Direct Route Refresh: /passport
     const passportRes = await request({ host: 'localhost', port, path: '/passport', method: 'GET' });
     assert(
       passportRes.statusCode === 200 && passportRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /passport falls back to SPA index.html'
     );
 
-    // 16. SPA Direct Route Refresh: /settings
+    // 19. SPA Direct Route Refresh: /settings
     const settingsRes = await request({ host: 'localhost', port, path: '/settings', method: 'GET' });
     assert(
       settingsRes.statusCode === 200 && settingsRes.body.toLowerCase().includes('<!doctype html>'),
       'Direct route refresh GET /settings falls back to SPA index.html'
     );
 
-    // 17. Static assets MIME type check (CSS & JS)
+    // 20. Static assets MIME type check (CSS & JS)
     const distAssetsDir = path.resolve(__dirname, '../client/dist/assets');
     const assetFiles = fs.readdirSync(distAssetsDir);
-    const cssFile = assetFiles.find(f => f.endsWith('.css'));
-    const jsFile = assetFiles.find(f => f.endsWith('.js'));
+    const cssFile = assetFiles.find((f) => f.endsWith('.css'));
+    const jsFile = assetFiles.find((f) => f.endsWith('.js'));
 
     if (cssFile) {
       const cssRes = await request({ host: 'localhost', port, path: `/assets/${cssFile}`, method: 'GET' });

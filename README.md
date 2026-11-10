@@ -52,6 +52,7 @@ CartPilot AI is an intelligent agentic commerce platform that helps consumers di
 | :--- | :--- |
 | **Frontend** | React 18, Vite, Tailwind CSS, Lucide React, Motion (`motion/react`), `@paypal/react-paypal-js`, Canvas Confetti |
 | **Backend** | Node.js (v24 LTS / v18+), Express.js, CORS, Morgan, Dotenv |
+| **Deployment** | Vercel Serverless Functions, Vercel Edge CDN (Single Project & Domain) |
 | **Database & Auth** | Supabase PostgreSQL (`@supabase/supabase-js`), Row Level Security (RLS) |
 | **AI Intelligence** | Google Gemini 2.5 Pro (`@google/generative-ai`) with autonomous tool calling |
 | **Payments** | PayPal Orders v2 REST API (Sandbox Environment) |
@@ -63,11 +64,16 @@ CartPilot AI is an intelligent agentic commerce platform that helps consumers di
 
 ```text
 CartpilotAI/
+├── vercel.json                   # Single-project Vercel deployment & routing configuration
 ├── .gitignore                    # Excludes node_modules, secrets, .env files, build artifacts
-├── .env.example                  # Root environment reference guide
-├── package.json                  # Root scripts for concurrently running client & server
-├── README.md                     # Project documentation & setup instructions
+├── .env.example                  # Unified environment reference guide for Vercel & local
+├── package.json                  # Root dependencies, install, build, and start scripts
+├── README.md                     # Complete project documentation & deployment guides
 ├── seed.sql                      # Supabase database schema & seed scripts
+│
+├── api/                          # Vercel Serverless Function Entrypoints
+│   ├── index.js                  # Canonical serverless handler wrapping Express app
+│   └── health.js                 # Standalone health check serverless entrypoint
 │
 ├── client/                       # React 18 + Vite + Tailwind CSS Frontend
 │   ├── .env.example              # Frontend environment variables template
@@ -87,7 +93,7 @@ CartpilotAI/
 │       ├── pages/
 │       │   ├── DashboardPage.jsx # Storefront homepage with hero & featured grid
 │       │   ├── DiscoverPage.jsx  # Catalogue discovery, filters, and PDP
-│       │   ├── AssistantPage.jsx # Full-height conversational AI shopping companion
+│       │   ├── AssistantPage.jsx # Conversational AI shopping companion
 │       │   ├── ComparePage.jsx   # Side-by-side product difference comparison
 │       │   ├── IntelligencePage.jsx # Analytical product decision dashboard
 │       │   ├── CartPage.jsx      # Shopping cart & budget ceiling guardrail
@@ -99,20 +105,26 @@ CartpilotAI/
 │       └── utils/
 │           └── currency.js       # Pure USD ($) currency formatting
 │
-└── server/                       # Node.js + Express.js API Backend
+└── server/                       # Reusable Backend Business Logic & Services
     ├── .env.example              # Backend environment variables template
     ├── package.json              # Server dependencies & scripts
     └── src/
-        ├── index.js              # Server entry point & graceful shutdown
-        ├── app.js                # Express app setup, CORS, JSON parser, route aggregation
+        ├── index.js              # Server entry point for local dev & standalone containers
+        ├── app.js                # Express app, CORS, routes aggregation, SPA fallback
         ├── config/
+        │   ├── env.js            # Central environment parser & validation
         │   ├── gemini.js         # Google Gemini AI client configuration
         │   ├── paypal.js         # PayPal OAuth2 client credentials & sandbox manager
         │   └── supabase.js       # Supabase PostgreSQL client initializer
         ├── controllers/
         │   ├── aiController.js   # Gemini agent multi-turn conversation handler
+        │   ├── healthController.js # Database & service health reporter
         │   └── paypalController.js # Server-side PayPal order creation & capture
-        ├── routes/               # API route aggregators
+        ├── middlewares/
+        │   ├── authMiddleware.js # Supabase JWT verification
+        │   ├── errorHandler.js   # Production-safe error masks
+        │   └── rateLimiter.js    # Serverless-safe unref in-memory rate limiter
+        ├── routes/               # API route aggregators (health, auth, ai, products, orders, cart, paypal)
         ├── scripts/              # Automated test suites & PayPal verification scripts
         └── services/
             ├── aiAgent.js        # Gemini autonomous tool declarations & execution
@@ -126,9 +138,9 @@ CartpilotAI/
 
 1. **Strict Server-Side Payment Verification**:
    - The frontend never confirms payments autonomously.
-   - All captures are posted to `/api/paypal/capture-order` where the Express backend verifies the transaction with PayPal's sandbox servers before recording order state or minting digital passports.
+   - All captures are posted to `/api/payments/capture-order` where the backend verifies the transaction with PayPal's sandbox servers before recording order state or minting digital passports.
 2. **Zero Secret Exposure**:
-   - Private API keys, PayPal client secrets, and service-role keys reside strictly on the backend server.
+   - Private API keys, PayPal client secrets, and Supabase service-role keys reside strictly on the serverless backend.
    - All `.env*` files are strictly excluded via `.gitignore`.
 3. **Demonstration & Synthetic Data Disclosures**:
    - **Catalogue Data**: All products, SKU identifiers, specifications, and merchant records belong to the open-source **Aptdot CC0-1.0 Universal** benchmark dataset.
@@ -137,112 +149,85 @@ CartpilotAI/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Unified Vercel Deployment (One Project, One Domain)
 
-### Prerequisites
+Deploying CartPilot AI to Vercel requires **ONE project** and produces **ONE public URL**:
 
-- **Node.js**: v18.0.0+ (Tested on Node v24.21.0)
-- **npm**: v9.0.0+ (Tested on npm 11.19.0)
+### 1. Import Project to Vercel
+1. Open the **[Vercel Dashboard](https://vercel.com/dashboard)**.
+2. Click **Add New → Project**.
+3. Select your repository.
+4. Keep the **Root Directory** as `./` *(repository root)*.
+5. Vercel automatically detects [`vercel.json`](file:///d:/CartpilotAI/vercel.json), uses `npm run build` to build the frontend into `client/dist`, and deploys the backend serverless functions in `api/`.
+
+### 2. Configure Environment Variables in Vercel
+In **Project Settings → Environment Variables**, add:
+
+| Variable | Recommended Value | Sensitive |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | No |
+| `PAYPAL_MODE` | `sandbox` *(STRICT: Live mode blocked)* | No |
+| `PAYPAL_CLIENT_ID` | Your PayPal Sandbox App Client ID | No |
+| `PAYPAL_CLIENT_SECRET` | Your PayPal Sandbox App Secret Key | **YES** |
+| `SUPABASE_URL` | `https://<your-project-ref>.supabase.co` | No |
+| `SUPABASE_ANON_KEY` | Your Supabase Anonymous Public Key | No |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase Service Role Secret Key | **YES** |
+| `GEMINI_API_KEY` | Your Google Gemini API Key | **YES** |
+| `GEMINI_MODEL` | `gemini-1.5-pro` | No |
+| `VITE_SUPABASE_URL` | `https://<your-project-ref>.supabase.co` | No |
+| `VITE_SUPABASE_ANON_KEY` | Your Supabase Anonymous Public Key | No |
+| `VITE_PAYPAL_CLIENT_ID` | Your PayPal Sandbox App Client ID | No |
+| `VITE_APP_ENV` | `production` | No |
+
+*Leave `VITE_API_BASE_URL` empty so all requests naturally use relative same-domain `/api` paths.*
+
+---
+
+## 💻 Local Development Setup
 
 ### 1. Installation
-
-Install all dependencies across root, backend, and frontend:
-
 ```bash
-# Using root helper
 npm run install:all
-
-# Or manually:
-npm install
-cd server && npm install
-cd ../client && npm install
-cd ..
 ```
 
 ### 2. Environment Configuration
-
-Create `.env` files in both `client` and `server` folders using the provided `.env.example` templates:
-
-#### Backend (`server/.env`):
-```bash
-PORT=5000
-NODE_ENV=development
-CLIENT_URL=http://localhost:5173
-
-# PayPal Sandbox Credentials (REST API v2)
-PAYPAL_MODE=sandbox
-PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
-PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret_here
-
-# Supabase Credentials
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
-
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-pro
-```
-
-#### Frontend (`client/.env`):
-```bash
-# Empty in local development to use Vite proxy
-VITE_API_BASE_URL=
-VITE_PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id_here
-
-# Supabase Credentials (Safe for browser client with RLS)
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
+Create local `.env` files in `client/` and `server/` following `.env.example`.
 
 ### 3. Database Migration & Seeding
-
 1. Open your **[Supabase Dashboard](https://supabase.com/dashboard)**.
-2. In the **SQL Editor**, run the contents of [`seed.sql`](file:///d:/CartpilotAI/seed.sql) (or `server/supabase/schema.sql` and `server/supabase/seed.sql`).
-3. This creates all core tables (`products`, `orders`, `order_items`, `passports`, `warranties`, `profiles`), RLS policies, and populates the 48 active Aptdot benchmark products.
+2. In the **SQL Editor**, run the contents of [`seed.sql`](file:///d:/CartpilotAI/seed.sql).
+3. This creates all tables, RLS policies, and populates the 48 active Aptdot benchmark products.
 
-### 4. Running in Development Mode
-
-Run both client and server concurrently from the root directory:
-
+### 4. Running Locally
 ```bash
 npm run dev
 ```
-
 - **Frontend**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:5000](http://localhost:5000)
-- **Backend Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- **Health Check**: [http://localhost:5000/health](http://localhost:5000/health)
 
 ---
 
 ## 🧪 Automated Testing & Verification
 
-CartPilot AI includes comprehensive automated audit and test suites:
-
 ```bash
 # Run comprehensive quality & functionality audit (41 automated tests)
 node scratch/final_quality_audit.js
 
+# Run Single Server & Vercel API routing verification suite (18 automated tests)
+node scratch/test_single_server.js
+
 # Run PayPal Sandbox integration & error handling suite (7 automated tests)
 node server/src/scripts/test_paypal_repair.js
 
-# Run React AST hook analyzer (validates Rules of Hooks across 42 components)
+# Run React AST hook analyzer (validates Rules of Hooks across all components)
 node scratch/ast_check_hooks.js
 
 # Run frontend production build
-npm run build --prefix client
+npm run build
 ```
 
 ---
 
-## ⚠️ Known Limitations
-
-1. **Sandbox Environment**: All payment authorization is tied to PayPal Sandbox accounts. Real payment methods (e.g. live credit cards) are rejected by design.
-2. **Synthetic Catalogue**: Product inventories, dimensions, and merchant entities are benchmark fixtures for evaluating agentic commerce; physical delivery does not occur.
-3. **Browser Storage**: Guest carts and unauthenticated states persist locally in browser storage until the user authenticates with Supabase.
-
----
-
 ## 📄 License
-
-This project is licensed under the open-source license chosen by the repository maintainer. See `LICENSE` for details.
+MIT License. Built for the PayPal AI Hackathon 2026.

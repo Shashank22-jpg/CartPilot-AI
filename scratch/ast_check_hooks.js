@@ -1,5 +1,10 @@
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fs = require('fs');
-const path = require('path');
 const parser = require(path.join(__dirname, '../client/node_modules/@babel/parser'));
 const traverse = require(path.join(__dirname, '../client/node_modules/@babel/traverse')).default;
 

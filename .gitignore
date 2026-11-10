@@ -3,12 +3,9 @@ node_modules/
 .pnp
 .pnp.js
 
-# Environment Variables & Secrets
+# Environment Variables & Secrets (CRITICAL)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
 *.pem
 *.key
@@ -18,7 +15,8 @@ node_modules/
 dist/
 dist-ssr/
 build/
-*.local
+client/dist/
+.vercel/
 
 # Logs
 npm-debug.log*
@@ -45,5 +43,5 @@ Thumbs.db
 .vite/
 .eslintcache
 
-# Scratch reference assets
+# Scratch reference assets & temporary local scripts
 scratch/emporium_reference/

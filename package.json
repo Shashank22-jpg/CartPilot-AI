@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CartPilot AI - Intelligent Agentic Commerce Platform for PayPal AI Hackathon 2026",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "npm run build --prefix client",
     "start": "node server/src/index.js",
@@ -11,7 +12,17 @@
     "dev:client": "npm run dev --prefix client",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "build:client": "npm run build --prefix client",
-    "start:server": "node server/src/index.js"
+    "start:server": "node server/src/index.js",
+    "test": "node scratch/final_quality_audit.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "morgan": "^1.10.0",
+    "motion": "^14.10.1"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
@@ -24,8 +35,5 @@
     "gemini"
   ],
   "author": "CartPilot AI Team",
-  "license": "MIT",
-  "dependencies": {
-    "motion": "^14.10.1"
-  }
+  "license": "MIT"
 }
