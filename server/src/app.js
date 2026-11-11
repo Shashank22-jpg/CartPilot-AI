@@ -1,10 +1,17 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import requestLogger from './middlewares/requestLogger.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { getHealth } from './controllers/healthController.js';
 import apiRouter from './routes/index.js';
 import config from './config/env.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
 
 const app = express();
 
@@ -30,13 +37,27 @@ export function isOriginAllowed(origin) {
 
   const normalized = origin.trim().replace(/\/$/, '');
 
-  // 2. Allow configured production client URL
-  if (config.clientUrl && normalized === config.clientUrl.trim().replace(/\/$/, '')) {
-    return true;
+  // 2. Allow configured production client URL (safely normalize origin even if path was included)
+  if (config.clientUrl) {
+    try {
+      const parsedOrigin = new URL(config.clientUrl).origin;
+      if (normalized === parsedOrigin || normalized === config.clientUrl.trim().replace(/\/$/, '')) {
+        return true;
+      }
+    } catch {
+      if (normalized === config.clientUrl.trim().replace(/\/$/, '')) {
+        return true;
+      }
+    }
   }
 
   // 3. Allow standard Vercel deployments (*.vercel.app)
   if (/^https:\/\/[a-z0-9_-]+\.vercel\.app$/i.test(normalized)) {
+    return true;
+  }
+
+  // 4. Allow standard Render deployments (*.onrender.com)
+  if (/^https:\/\/[a-z0-9_-]+\.onrender\.com$/i.test(normalized)) {
     return true;
   }
 
@@ -85,18 +106,6 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Root API descriptor endpoint (pure JSON, no static HTML)
-app.get('/', (req, res) => {
-  res.status(200).json({
-    service: 'CartPilot AI API',
-    status: 'ok',
-    healthCheck: '/health',
-    apiRoot: '/api',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // Mount core API master router
 app.use('/api', apiRouter);
 
@@ -108,6 +117,35 @@ app.all('/api/*', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Serve frontend static build if client/dist exists (Fullstack Render / Production mode)
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback for non-API client GET routes
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next();
+    }
+    const indexPath = path.join(clientDistPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    return next();
+  });
+} else {
+  // Pure JSON API descriptor fallback when frontend static build is not present
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      service: 'CartPilot AI API',
+      status: 'ok',
+      healthCheck: '/health',
+      apiRoot: '/api',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
 
 // Catch-all 404 for any remaining unhandled routes on the Express API
 app.use((req, res) => {

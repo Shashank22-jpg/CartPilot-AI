@@ -1,0 +1,49 @@
+# ==============================================================================
+# CartPilot AI - Render Blueprint Specification (Infrastructure-as-Code)
+# ==============================================================================
+# Deploy to Render by connecting your repository and selecting "Blueprint",
+# or manually creating a Web Service with the settings below.
+# ==============================================================================
+
+services:
+  - type: web
+    name: cartpilot-ai
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: PAYPAL_MODE
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-1.5-pro
+      - key: CLIENT_URL
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_PAYPAL_CLIENT_ID
+        sync: false
+
