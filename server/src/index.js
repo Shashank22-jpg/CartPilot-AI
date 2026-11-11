@@ -6,8 +6,9 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 let server = null;
 
-// Only start HTTP listener when NOT running in a serverless environment (e.g. Vercel)
-if (!process.env.VERCEL) {
+// Only skip the HTTP listener on Vercel serverless; Railway is a long-running host even if VERCEL is set
+const isServerless = Boolean(process.env.VERCEL) && !process.env.RAILWAY_ENVIRONMENT_ID;
+if (!isServerless) {
   server = app.listen(PORT, HOST, () => {
     console.log(`====================================================`);
     console.log(`🚀 CartPilot AI Server running on ${HOST}:${PORT}`);
