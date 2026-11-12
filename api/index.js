@@ -4,6 +4,87 @@ import { URL } from 'url';
 import app from '../server/src/app.js';
 
 /**
+ * Resolves the true intended request path from Vercel edge headers,
+ * query parameters (catch-all segments), or raw request URL.
+ */
+export function resolveIncomingPath(req) {
+  const matchedPath = req.headers?.['x-matched-path'];
+  const forwardedUri = req.headers?.['x-forwarded-uri'];
+  const invokePath = req.headers?.['x-invoke-path'];
+
+  let candidate = '';
+  if (
+    matchedPath &&
+    !matchedPath.includes('[...all]') &&
+    !matchedPath.endsWith('/api/index.js') &&
+    !matchedPath.endsWith('/api/index') &&
+    !matchedPath.endsWith('/api/health.js')
+  ) {
+    candidate = matchedPath;
+  } else if (
+    forwardedUri &&
+    !forwardedUri.includes('[...all]') &&
+    !forwardedUri.endsWith('/api/index.js') &&
+    !forwardedUri.endsWith('/api/index')
+  ) {
+    candidate = forwardedUri;
+  } else if (
+    invokePath &&
+    !invokePath.includes('[...all]') &&
+    !invokePath.endsWith('/api/index.js') &&
+    !invokePath.endsWith('/api/index')
+  ) {
+    candidate = invokePath;
+  } else if (req.query?.all) {
+    const segments = Array.isArray(req.query.all) ? req.query.all.join('/') : req.query.all;
+    candidate = `/api/${segments}`;
+  } else if (req.query?.match) {
+    const segments = Array.isArray(req.query.match) ? req.query.match.join('/') : req.query.match;
+    candidate = `/api/${segments}`;
+  } else if (req.query?.path) {
+    const segments = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+    candidate = `/api/${segments}`;
+  } else {
+    candidate = req.url || '/api';
+    const qIndex = candidate.indexOf('?');
+    if (qIndex !== -1) {
+      candidate = candidate.slice(0, qIndex);
+    }
+    if (
+      candidate === '/api/index.js' ||
+      candidate === '/api/index' ||
+      candidate.includes('[...all]')
+    ) {
+      candidate = '/api';
+    } else if (candidate === '/api/health.js' || candidate === '/api/health') {
+      candidate = '/health';
+    }
+  }
+
+  // Ensure leading slash
+  if (!candidate.startsWith('/')) {
+    candidate = `/${candidate}`;
+  }
+
+  // Preserve real user query parameters while stripping internal Vercel routing parameters
+  const rawUrl = req.url || '';
+  const qIndex = rawUrl.indexOf('?');
+  if (qIndex !== -1) {
+    const searchParams = new URLSearchParams(rawUrl.slice(qIndex + 1));
+    searchParams.delete('all');
+    searchParams.delete('match');
+    searchParams.delete('path');
+    searchParams.delete('slug');
+    const filtered = searchParams.toString();
+    if (filtered) {
+      candidate += `?${filtered}`;
+    }
+  }
+
+  return candidate;
+}
+
+/**
  * High-fidelity reverse proxy to forward requests to an external backend (e.g. Render)
  * Preserves HTTP method, headers, query strings, and body streaming
  */
@@ -12,38 +93,7 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
     const target = new URL(targetBaseUrl);
     const basePath = target.pathname === '/' ? '' : target.pathname.replace(/\/$/, '');
 
-    // Resolve the true client requested path from Vercel rewrite headers or req.url
-    let incomingPath =
-      req.headers['x-matched-path'] ||
-      req.headers['x-forwarded-uri'] ||
-      req.headers['x-invoke-path'] ||
-      req.url ||
-      '';
-
-    // If incomingPath was rewritten to internal function path (/api/index.js), restore the intended route
-    if (incomingPath.startsWith('/api/index.js')) {
-      if (req.query && req.query.match) {
-        const matchPart = Array.isArray(req.query.match) ? req.query.match.join('/') : req.query.match;
-        incomingPath = `/api/${matchPart}`;
-      } else {
-        incomingPath = incomingPath.replace(/^\/api\/index\.js/, '/api');
-      }
-    } else if (incomingPath.startsWith('/api/health.js')) {
-      incomingPath = '/health';
-    }
-
-    // Preserve original query parameters if not present in incomingPath, filtering out internal Vercel params (e.g. match)
-    const reqUrl = req.url || '';
-    const qIndex = reqUrl.indexOf('?');
-    if (qIndex !== -1 && !incomingPath.includes('?')) {
-      const searchParams = new URLSearchParams(reqUrl.slice(qIndex + 1));
-      searchParams.delete('match'); // Strip Vercel rewrite capture parameter
-      const filteredQuery = searchParams.toString();
-      if (filteredQuery) {
-        incomingPath += `?${filteredQuery}`;
-      }
-    }
-
+    const incomingPath = resolveIncomingPath(req);
     const targetPath = `${basePath}${incomingPath}`;
 
     // Prepare body payload if pre-parsed by serverless runtime
@@ -106,8 +156,10 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
     if (bodyBuffer) {
       proxyReq.write(bodyBuffer);
       proxyReq.end();
-    } else {
+    } else if (typeof req.pipe === 'function') {
       req.pipe(proxyReq, { end: true });
+    } else {
+      proxyReq.end();
     }
   } catch (err) {
     console.error('[Vercel->Render Proxy Exception]:', err.message);

@@ -2,6 +2,22 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/api",
+      "destination": "/api"
+    },
+    {
+      "source": "/api/:match*",
+      "destination": "/api/[...all]"
+    },
+    {
       "source": "/((?!api($|\\/)|health($|\\/)).*)",
       "destination": "/index.html"
     }
