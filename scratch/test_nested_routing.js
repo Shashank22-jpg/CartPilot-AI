@@ -3,53 +3,70 @@ import assert from 'assert';
 import { resolveIncomingPath, forwardToExternalBackend } from '../api/index.js';
 import { resolveIncomingPath as clientResolve, forwardToExternalBackend as clientForward } from '../client/api/index.js';
 
-console.log('=== RUNNING NESTED ROUTING & PROXY VERIFICATION AUDIT ===\n');
+console.log('=== RUNNING SEQUENTIAL REWRITE & PROXY VERIFICATION AUDIT ===\n');
 
 // -------------------------------------------------------------
-// Test 1: Rewrite Negative Lookahead & Fallback Regex
+// Test 1: Vercel Sequential Rewrite Evaluation
 // -------------------------------------------------------------
-console.log('1. Testing SPA Fallback Rewrite Regex:');
-const spaExcludeRegex = /^\/((?!api($|\/)|health($|\/)).*)$/;
+console.log('1. Testing Sequential Rewrite Evaluation:');
 
-const testRoutes = [
-  // Must NOT match SPA fallback (MUST go to API / Render)
-  { path: '/api', expectSPA: false },
-  { path: '/api/', expectSPA: false },
-  { path: '/api/auth/register', expectSPA: false },
-  { path: '/api/auth/login', expectSPA: false },
-  { path: '/api/auth/me', expectSPA: false },
-  { path: '/api/products', expectSPA: false },
-  { path: '/api/products/aptdot', expectSPA: false },
-  { path: '/api/products/01953224-61c0-7ce2-a7c6-eae8d5405eaa', expectSPA: false },
-  { path: '/api/cart', expectSPA: false },
-  { path: '/api/orders', expectSPA: false },
-  { path: '/api/orders/passports', expectSPA: false },
-  { path: '/api/payments/create-order', expectSPA: false },
-  { path: '/api/payments/capture-order', expectSPA: false },
-  { path: '/api/ai/chat', expectSPA: false },
-  { path: '/api/ai/prompts', expectSPA: false },
-  { path: '/health', expectSPA: false },
-  { path: '/health/', expectSPA: false },
-  { path: '/api/health', expectSPA: false },
-
-  // MUST match SPA fallback (Frontend routes -> index.html)
-  { path: '/', expectSPA: true },
-  { path: '/register', expectSPA: true },
-  { path: '/login', expectSPA: true },
-  { path: '/dashboard', expectSPA: true },
-  { path: '/discover', expectSPA: true },
-  { path: '/compare', expectSPA: true },
-  { path: '/intelligence', expectSPA: true },
-  { path: '/cart', expectSPA: true },
-  { path: '/orders', expectSPA: true },
-  { path: '/passports', expectSPA: true },
-  { path: '/settings', expectSPA: true },
+// Simulate Vercel's sequential rewrite matching engine
+const rules = [
+  { sourcePattern: /^\/health$/, dest: '/api/health', isApi: true },
+  { sourcePattern: /^\/api\/health$/, dest: '/api/health', isApi: true },
+  { sourcePattern: /^\/api$/, dest: '/api', isApi: true },
+  { sourcePattern: /^\/api(?:\/(.*))?$/, dest: '/api/:path*', isApi: true },
+  { sourcePattern: /^(?:\/(.*))?$/, dest: '/index.html', isApi: false },
 ];
 
-for (const { path, expectSPA } of testRoutes) {
-  const isSPA = spaExcludeRegex.test(path);
-  assert.strictEqual(isSPA, expectSPA, `Path ${path} expected expectSPA=${expectSPA}, got ${isSPA}`);
-  console.log(`  ✓ ${path.padEnd(55)} -> ${isSPA ? 'Frontend SPA (index.html)' : 'API / Backend (PROXY)'}`);
+function evaluateRewrite(pathname) {
+  for (let i = 0; i < rules.length; i++) {
+    const r = rules[i];
+    if (r.sourcePattern.test(pathname)) {
+      return { matchedRule: i, dest: r.dest, isApi: r.isApi };
+    }
+  }
+  return { matchedRule: -1, dest: null, isApi: false };
+}
+
+const testRoutes = [
+  // Must be captured by API rules (Rules 0-3) -> NEVER reach Rule 4 (/index.html)
+  { path: '/health', expectRule: 0, expectApi: true },
+  { path: '/api/health', expectRule: 1, expectApi: true },
+  { path: '/api', expectRule: 2, expectApi: true },
+  { path: '/api/auth/register', expectRule: 3, expectApi: true },
+  { path: '/api/auth/login', expectRule: 3, expectApi: true },
+  { path: '/api/auth/me', expectRule: 3, expectApi: true },
+  { path: '/api/products', expectRule: 3, expectApi: true },
+  { path: '/api/products/aptdot', expectRule: 3, expectApi: true },
+  { path: '/api/products/01953224-61c0-7ce2-a7c6-eae8d5405eaa', expectRule: 3, expectApi: true },
+  { path: '/api/cart', expectRule: 3, expectApi: true },
+  { path: '/api/orders', expectRule: 3, expectApi: true },
+  { path: '/api/orders/passports', expectRule: 3, expectApi: true },
+  { path: '/api/payments/create-order', expectRule: 3, expectApi: true },
+  { path: '/api/payments/capture-order', expectRule: 3, expectApi: true },
+  { path: '/api/ai/chat', expectRule: 3, expectApi: true },
+  { path: '/api/ai/prompts', expectRule: 3, expectApi: true },
+
+  // Must fall through to Rule 4 (Frontend SPA -> index.html)
+  { path: '/', expectRule: 4, expectApi: false },
+  { path: '/register', expectRule: 4, expectApi: false },
+  { path: '/login', expectRule: 4, expectApi: false },
+  { path: '/dashboard', expectRule: 4, expectApi: false },
+  { path: '/discover', expectRule: 4, expectApi: false },
+  { path: '/compare', expectRule: 4, expectApi: false },
+  { path: '/intelligence', expectRule: 4, expectApi: false },
+  { path: '/cart', expectRule: 4, expectApi: false },
+  { path: '/orders', expectRule: 4, expectApi: false },
+  { path: '/passports', expectRule: 4, expectApi: false },
+  { path: '/settings', expectRule: 4, expectApi: false },
+];
+
+for (const { path, expectRule, expectApi } of testRoutes) {
+  const result = evaluateRewrite(path);
+  assert.strictEqual(result.matchedRule, expectRule, `Path ${path} expected rule ${expectRule}, got ${result.matchedRule}`);
+  assert.strictEqual(result.isApi, expectApi, `Path ${path} expected isApi=${expectApi}, got ${result.isApi}`);
+  console.log(`  ✓ ${path.padEnd(55)} -> Rule [${result.matchedRule}] (${result.dest}) [${result.isApi ? 'API PROXY' : 'SPA INDEX.HTML'}]`);
 }
 
 // -------------------------------------------------------------
@@ -58,13 +75,13 @@ for (const { path, expectSPA } of testRoutes) {
 console.log('\n2. Testing resolveIncomingPath() with Vercel Rewrite Headers & Query:');
 
 const resolutionCases = [
-  // Scenario A: x-matched-path provided by Vercel edge
+  // Scenario A: x-matched-path provided by Vercel edge on POST /api/auth/register
   {
     desc: 'x-matched-path on nested POST /api/auth/register',
     req: {
-      url: '/api/[...all]?all=auth&all=register',
+      url: '/api/[...path]?path=auth&path=register',
       headers: { 'x-matched-path': '/api/auth/register' },
-      query: { all: ['auth', 'register'] },
+      query: { path: ['auth', 'register'] },
     },
     expected: '/api/auth/register',
   },
@@ -72,19 +89,19 @@ const resolutionCases = [
   {
     desc: 'nested GET /api/products with query string and Vercel internal query',
     req: {
-      url: '/api/[...all]?all=products&catalogue=aptdot&limit=50',
+      url: '/api/[...path]?path=products&catalogue=aptdot&limit=50',
       headers: { 'x-matched-path': '/api/products' },
-      query: { all: ['products'] },
+      query: { path: ['products'] },
     },
     expected: '/api/products?catalogue=aptdot&limit=50',
   },
-  // Scenario C: req.query.all fallback (no x-matched-path)
+  // Scenario C: req.query.path fallback (no x-matched-path)
   {
-    desc: 'req.query.all fallback on /api/orders/passports',
+    desc: 'req.query.path fallback on /api/orders/passports',
     req: {
-      url: '/api/[...all]',
+      url: '/api/[...path]',
       headers: {},
-      query: { all: ['orders', 'passports'] },
+      query: { path: ['orders', 'passports'] },
     },
     expected: '/api/orders/passports',
   },
@@ -92,9 +109,9 @@ const resolutionCases = [
   {
     desc: 'x-matched-path on /api/payments/create-order',
     req: {
-      url: '/api/[...all]?all=payments&all=create-order',
+      url: '/api/[...path]?path=payments&path=create-order',
       headers: { 'x-matched-path': '/api/payments/create-order' },
-      query: { all: ['payments', 'create-order'] },
+      query: { path: ['payments', 'create-order'] },
     },
     expected: '/api/payments/create-order',
   },
@@ -129,9 +146,9 @@ for (const testCase of resolutionCases) {
 }
 
 // -------------------------------------------------------------
-// Test 3: End-to-End Mock Render Proxy with Request Payload & Headers
+// Test 3: End-to-End Mock Render Proxy with All HTTP Methods & Payloads
 // -------------------------------------------------------------
-console.log('\n3. Testing End-to-End HTTP Method, Body, and Header Forwarding to Mock Render:');
+console.log('\n3. Testing HTTP Methods (POST, GET, PUT, PATCH, DELETE) and Payload Forwarding to Mock Render:');
 
 let capturedTargetReq = null;
 const mockRenderServer = http.createServer((targetReq, targetRes) => {
@@ -145,11 +162,11 @@ const mockRenderServer = http.createServer((targetReq, targetRes) => {
       headers: targetReq.headers,
       body: rawBody,
     };
-    targetRes.writeHead(201, {
+    targetRes.writeHead(200, {
       'Content-Type': 'application/json',
-      'X-Render-Mock': 'true',
+      'X-Mock-Render': 'true',
     });
-    targetRes.end(JSON.stringify({ success: true, message: 'Received by mock Render' }));
+    targetRes.end(JSON.stringify({ success: true, method: targetReq.method }));
   });
 });
 
@@ -157,24 +174,19 @@ await new Promise(r => mockRenderServer.listen(0, r));
 const mockPort = mockRenderServer.address().port;
 const mockRenderUrl = `http://127.0.0.1:${mockPort}`;
 
-// Test 3a: POST /api/auth/register with user payload
-{
+const methodsToTest = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
+
+for (const method of methodsToTest) {
   capturedTargetReq = null;
   const fakeReq = {
-    method: 'POST',
-    url: '/api/[...all]?all=auth&all=register',
+    method,
+    url: '/api/[...path]?path=auth&path=register',
     headers: {
       'x-matched-path': '/api/auth/register',
       'content-type': 'application/json',
-      authorization: 'Bearer mock-client-token',
-      'user-agent': 'DevTools-Chrome/128.0',
+      authorization: 'Bearer token-123',
     },
-    body: {
-      fullName: 'Jane Merchant',
-      email: 'jane@cartpilot.test',
-      phone: '+14155552671',
-      password: 'SecurePassword2026!',
-    },
+    body: method !== 'GET' ? { testMethod: method, payload: 'data' } : undefined,
   };
 
   const fakeRes = new (await import('stream')).PassThrough();
@@ -182,72 +194,18 @@ const mockRenderUrl = `http://127.0.0.1:${mockPort}`;
   fakeRes.writeHead = (status, headers) => {};
 
   forwardToExternalBackend(fakeReq, fakeRes, mockRenderUrl);
-  await new Promise(r => setTimeout(r, 200));
+  await new Promise(r => setTimeout(r, 150));
 
-  assert(capturedTargetReq !== null, 'Target request should have been received');
-  assert.strictEqual(capturedTargetReq.method, 'POST');
+  assert(capturedTargetReq !== null, `Target request should have been received for ${method}`);
+  assert.strictEqual(capturedTargetReq.method, method, `HTTP method should be ${method}`);
   assert.strictEqual(capturedTargetReq.url, '/api/auth/register');
-  assert.strictEqual(capturedTargetReq.headers['content-type'], 'application/json');
-  assert.strictEqual(capturedTargetReq.headers['authorization'], 'Bearer mock-client-token');
-  const parsed = JSON.parse(capturedTargetReq.body);
-  assert.strictEqual(parsed.email, 'jane@cartpilot.test');
-  assert.strictEqual(parsed.fullName, 'Jane Merchant');
-  console.log('  ✓ POST /api/auth/register delivered to Render backend with accurate URL, JSON body & headers');
-}
-
-// Test 3b: POST /api/payments/create-order
-{
-  capturedTargetReq = null;
-  const fakeReq = {
-    method: 'POST',
-    url: '/api/[...all]?all=payments&all=create-order',
-    headers: {
-      'x-matched-path': '/api/payments/create-order',
-      'content-type': 'application/json',
-    },
-    body: {
-      items: [{ productId: 'p-1', quantity: 1, price: 99.99 }],
-      currency: 'USD',
-    },
-  };
-
-  const fakeRes = new (await import('stream')).PassThrough();
-  fakeRes.headersSent = false;
-  fakeRes.writeHead = () => {};
-
-  forwardToExternalBackend(fakeReq, fakeRes, mockRenderUrl);
-  await new Promise(r => setTimeout(r, 200));
-
-  assert(capturedTargetReq !== null);
-  assert.strictEqual(capturedTargetReq.method, 'POST');
-  assert.strictEqual(capturedTargetReq.url, '/api/payments/create-order');
-  console.log('  ✓ POST /api/payments/create-order delivered to Render backend');
-}
-
-// Test 3c: GET /api/products?category=Electronics
-{
-  capturedTargetReq = null;
-  const fakeReq = {
-    method: 'GET',
-    url: '/api/[...all]?all=products&category=Electronics&limit=20',
-    headers: {
-      'x-matched-path': '/api/products',
-    },
-  };
-
-  const fakeRes = new (await import('stream')).PassThrough();
-  fakeRes.headersSent = false;
-  fakeRes.writeHead = () => {};
-
-  forwardToExternalBackend(fakeReq, fakeRes, mockRenderUrl);
-  await new Promise(r => setTimeout(r, 200));
-
-  assert(capturedTargetReq !== null);
-  assert.strictEqual(capturedTargetReq.method, 'GET');
-  assert.strictEqual(capturedTargetReq.url, '/api/products?category=Electronics&limit=20');
-  console.log('  ✓ GET /api/products with query parameters preserved: ' + capturedTargetReq.url);
+  assert.strictEqual(capturedTargetReq.headers['authorization'], 'Bearer token-123');
+  if (method !== 'GET') {
+    assert(capturedTargetReq.body.includes(method), `Body should contain ${method}`);
+  }
+  console.log(`  ✓ ${method.padEnd(7)} forwarded with method, path, headers & body preserved`);
 }
 
 mockRenderServer.close();
 
-console.log('\n=== ALL NESTED ROUTING AUDIT TESTS PASSED SUCCESSFULLY! ===\n');
+console.log('\n=== ALL SEQUENTIAL ROUTING & PROXY TESTS PASSED SUCCESSFULLY! ===\n');

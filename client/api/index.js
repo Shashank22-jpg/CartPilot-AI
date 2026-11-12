@@ -14,7 +14,7 @@ export function resolveIncomingPath(req) {
   let candidate = '';
   if (
     matchedPath &&
-    !matchedPath.includes('[...all]') &&
+    !matchedPath.includes('[...') &&
     !matchedPath.endsWith('/api/index.js') &&
     !matchedPath.endsWith('/api/index') &&
     !matchedPath.endsWith('/api/health.js')
@@ -22,26 +22,26 @@ export function resolveIncomingPath(req) {
     candidate = matchedPath;
   } else if (
     forwardedUri &&
-    !forwardedUri.includes('[...all]') &&
+    !forwardedUri.includes('[...') &&
     !forwardedUri.endsWith('/api/index.js') &&
     !forwardedUri.endsWith('/api/index')
   ) {
     candidate = forwardedUri;
   } else if (
     invokePath &&
-    !invokePath.includes('[...all]') &&
+    !invokePath.includes('[...') &&
     !invokePath.endsWith('/api/index.js') &&
     !invokePath.endsWith('/api/index')
   ) {
     candidate = invokePath;
+  } else if (req.query?.path) {
+    const segments = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+    candidate = `/api/${segments}`;
   } else if (req.query?.all) {
     const segments = Array.isArray(req.query.all) ? req.query.all.join('/') : req.query.all;
     candidate = `/api/${segments}`;
   } else if (req.query?.match) {
     const segments = Array.isArray(req.query.match) ? req.query.match.join('/') : req.query.match;
-    candidate = `/api/${segments}`;
-  } else if (req.query?.path) {
-    const segments = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
     candidate = `/api/${segments}`;
   } else {
     candidate = req.url || '/api';
@@ -52,7 +52,7 @@ export function resolveIncomingPath(req) {
     if (
       candidate === '/api/index.js' ||
       candidate === '/api/index' ||
-      candidate.includes('[...all]')
+      candidate.includes('[...')
     ) {
       candidate = '/api';
     } else if (candidate === '/api/health.js' || candidate === '/api/health') {
@@ -68,9 +68,9 @@ export function resolveIncomingPath(req) {
   const qIndex = rawUrl.indexOf('?');
   if (qIndex !== -1) {
     const searchParams = new URLSearchParams(rawUrl.slice(qIndex + 1));
+    searchParams.delete('path');
     searchParams.delete('all');
     searchParams.delete('match');
-    searchParams.delete('path');
     searchParams.delete('slug');
     const filtered = searchParams.toString();
     if (filtered) {

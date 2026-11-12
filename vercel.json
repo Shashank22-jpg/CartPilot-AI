@@ -17,11 +17,11 @@
       "destination": "/api"
     },
     {
-      "source": "/api/:match*",
-      "destination": "/api/[...all]"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
-      "source": "/((?!api($|\\/)|health($|\\/)).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
