@@ -4,13 +4,14 @@ import { URL } from 'url';
 import app from '../server/src/app.js';
 
 /**
- * High-fidelity reverse proxy to forward requests to an external backend (e.g. Railway)
+ * High-fidelity reverse proxy to forward requests to an external backend (e.g. Render)
  * Preserves HTTP method, headers, query strings, and body streaming
  */
 export function forwardToExternalBackend(req, res, targetBaseUrl) {
   try {
     const target = new URL(targetBaseUrl);
-    const targetPath = req.url || '';
+    const basePath = target.pathname === '/' ? '' : target.pathname.replace(/\/$/, '');
+    const targetPath = `${basePath}${req.url || ''}`;
 
     // Clone incoming headers and set Host to target domain
     const headers = { ...req.headers };
@@ -39,27 +40,34 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
     });
 
     proxyReq.on('error', (err) => {
-      console.error('[Vercel->Railway Proxy Error]:', err.message);
+      console.error('[Vercel->Render Proxy Error]:', err.message);
       if (!res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: false,
-          error: 'Bad Gateway: Unable to reach Railway backend service.',
+          error: 'Bad Gateway: Unable to reach Render backend service.',
           details: err.message,
           timestamp: new Date().toISOString(),
         }));
       }
     });
 
-    // Pipe the request body directly (JSON, form data, streams)
-    req.pipe(proxyReq, { end: true });
+    // Handle request body: if already parsed as an object, write it; otherwise stream
+    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+      const bodyData = JSON.stringify(req.body);
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      proxyReq.write(bodyData);
+      proxyReq.end();
+    } else {
+      req.pipe(proxyReq, { end: true });
+    }
   } catch (err) {
-    console.error('[Vercel->Railway Proxy Exception]:', err.message);
+    console.error('[Vercel->Render Proxy Exception]:', err.message);
     if (!res.headersSent) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         success: false,
-        error: 'Proxy Configuration Error: Invalid RAILWAY_API_URL.',
+        error: 'Proxy Configuration Error: Invalid RENDER_API_URL.',
         details: err.message,
       }));
     }
@@ -68,15 +76,16 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
 
 /**
  * CartPilot AI - Vercel Serverless Function Entrypoint
- * - When RAILWAY_API_URL is set: Transparently proxies to Railway backend
- * - When RAILWAY_API_URL is not set: Runs embedded Express app serverlessly
+ * - When RENDER_API_URL is set: Transparently proxies to Render backend
+ * - When RENDER_API_URL is not set: Runs embedded Express app serverlessly
  */
 export default async function handler(req, res) {
-  const railwayUrl = process.env.RAILWAY_API_URL?.trim();
+  const backendUrl = (process.env.RENDER_API_URL || process.env.RAILWAY_API_URL)?.trim();
 
-  if (railwayUrl) {
-    return forwardToExternalBackend(req, res, railwayUrl);
+  if (backendUrl) {
+    return forwardToExternalBackend(req, res, backendUrl);
   }
 
   return app(req, res);
 }
+

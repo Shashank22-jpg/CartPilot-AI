@@ -5,13 +5,13 @@ import { forwardToExternalBackend } from './index.js';
 /**
  * Dedicated Vercel Serverless Health Function
  * Serves /health and /api/health
- * - When RAILWAY_API_URL is set: Proxies to Railway backend /health
- * - When RAILWAY_API_URL is not set: Executes local getHealth check
+ * - When RENDER_API_URL is set: Proxies to Render backend /health
+ * - When RENDER_API_URL is not set: Executes local getHealth check
  */
 export default async function handler(req, res) {
-  const railwayUrl = process.env.RAILWAY_API_URL?.trim();
-  if (railwayUrl) {
-    return forwardToExternalBackend(req, res, railwayUrl);
+  const backendUrl = (process.env.RENDER_API_URL || process.env.RAILWAY_API_URL)?.trim();
+  if (backendUrl) {
+    return forwardToExternalBackend(req, res, backendUrl);
   }
 
   const origin = req.headers?.origin;
@@ -36,3 +36,4 @@ export default async function handler(req, res) {
 
   return getHealth(req, res);
 }
+
