@@ -146,16 +146,37 @@ export default function RegisterPage() {
     const fullPhoneNumber = `${countryCode}${phone.replace(/[^0-9]/g, '')}`;
 
     try {
-      // 1. Create real Supabase Auth user via backend API
-      const regRes = await apiService.registerUser({
-        fullName: fullName.trim(),
-        email: email.trim(),
-        phone: fullPhoneNumber,
-        password,
-      });
+      let regRes = null;
+      try {
+        // 1. Attempt primary Supabase Auth registration via backend API
+        regRes = await apiService.registerUser({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          phone: fullPhoneNumber,
+          password,
+        });
+      } catch (apiErr) {
+        // If the backend actively rejected with a 400 or 409 validation error, rethrow directly
+        if (apiErr.status === 409 || (apiErr.status === 400 && apiErr.data?.error)) {
+          throw apiErr;
+        }
 
-      if (!regRes.success) {
-        throw new Error(regRes.error || 'Registration failed.');
+        console.warn('[RegisterPage] Backend API registration notice:', apiErr.message, '- falling back to direct Supabase Auth client');
+        // Resilient fallback: register directly with Supabase Auth client
+        const { data: sbData, error: sbError } = await signUpWithEmail(email.trim(), password, {
+          fullName: fullName.trim(),
+          phone: fullPhoneNumber,
+        });
+
+        if (sbError) {
+          throw sbError;
+        }
+
+        regRes = { success: true, user: sbData?.user };
+      }
+
+      if (!regRes || (!regRes.success && !regRes.user)) {
+        throw new Error(regRes?.error || 'Registration failed.');
       }
 
       // 2. Establish live authenticated session via Supabase browser client

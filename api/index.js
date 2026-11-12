@@ -11,7 +11,52 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
   try {
     const target = new URL(targetBaseUrl);
     const basePath = target.pathname === '/' ? '' : target.pathname.replace(/\/$/, '');
-    const targetPath = `${basePath}${req.url || ''}`;
+
+    // Resolve the true client requested path from Vercel rewrite headers or req.url
+    let incomingPath =
+      req.headers['x-matched-path'] ||
+      req.headers['x-forwarded-uri'] ||
+      req.headers['x-invoke-path'] ||
+      req.url ||
+      '';
+
+    // If incomingPath was rewritten to internal function path (/api/index.js), restore the intended route
+    if (incomingPath.startsWith('/api/index.js')) {
+      if (req.query && req.query.match) {
+        const matchPart = Array.isArray(req.query.match) ? req.query.match.join('/') : req.query.match;
+        incomingPath = `/api/${matchPart}`;
+      } else {
+        incomingPath = incomingPath.replace(/^\/api\/index\.js/, '/api');
+      }
+    } else if (incomingPath.startsWith('/api/health.js')) {
+      incomingPath = '/health';
+    }
+
+    // Preserve original query parameters if not present in incomingPath, filtering out internal Vercel params (e.g. match)
+    const reqUrl = req.url || '';
+    const qIndex = reqUrl.indexOf('?');
+    if (qIndex !== -1 && !incomingPath.includes('?')) {
+      const searchParams = new URLSearchParams(reqUrl.slice(qIndex + 1));
+      searchParams.delete('match'); // Strip Vercel rewrite capture parameter
+      const filteredQuery = searchParams.toString();
+      if (filteredQuery) {
+        incomingPath += `?${filteredQuery}`;
+      }
+    }
+
+    const targetPath = `${basePath}${incomingPath}`;
+
+    // Prepare body payload if pre-parsed by serverless runtime
+    let bodyBuffer = null;
+    if (req.body !== undefined && req.body !== null) {
+      if (Buffer.isBuffer(req.body)) {
+        bodyBuffer = req.body;
+      } else if (typeof req.body === 'string') {
+        bodyBuffer = Buffer.from(req.body, 'utf8');
+      } else if (typeof req.body === 'object') {
+        bodyBuffer = Buffer.from(JSON.stringify(req.body), 'utf8');
+      }
+    }
 
     // Clone incoming headers and set Host to target domain
     const headers = { ...req.headers };
@@ -21,6 +66,12 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
     }
     if (!headers['x-forwarded-proto']) {
       headers['x-forwarded-proto'] = 'https';
+    }
+
+    if (bodyBuffer) {
+      headers['content-length'] = bodyBuffer.length;
+      headers['content-type'] = headers['content-type'] || 'application/json';
+      delete headers['transfer-encoding'];
     }
 
     const options = {
@@ -52,11 +103,8 @@ export function forwardToExternalBackend(req, res, targetBaseUrl) {
       }
     });
 
-    // Handle request body: if already parsed as an object, write it; otherwise stream
-    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
-      const bodyData = JSON.stringify(req.body);
-      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
-      proxyReq.write(bodyData);
+    if (bodyBuffer) {
+      proxyReq.write(bodyBuffer);
       proxyReq.end();
     } else {
       req.pipe(proxyReq, { end: true });
